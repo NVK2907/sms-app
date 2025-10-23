@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   PlusIcon,
   MagnifyingGlassIcon,
@@ -10,6 +10,7 @@ import {
   AcademicCapIcon,
   CalendarIcon
 } from '@heroicons/react/24/outline';
+import { studentService } from '../../services/studentService';
 
 const StudentManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -19,87 +20,94 @@ const StudentManagement = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [pagination, setPagination] = useState({
+    page: 0,
+    size: 10,
+    totalElements: 0,
+    totalPages: 0
+  });
 
-  // Mock data
-  const students = [
-    {
-      id: 1,
-      studentCode: 'SV001',
-      fullName: 'Nguyễn Văn An',
-      email: 'an.nguyen@sms.com',
-      phone: '0123456789',
-      dateOfBirth: '2005-03-15',
-      gender: 'male',
-      address: '123 Đường ABC, Quận 1, TP.HCM',
-      className: '10A1',
-      course: 'Khóa 2023-2026',
-      status: 'active',
-      enrollmentDate: '2023-09-01'
-    },
-    {
-      id: 2,
-      studentCode: 'SV002',
-      fullName: 'Trần Thị Bình',
-      email: 'binh.tran@sms.com',
-      phone: '0987654321',
-      dateOfBirth: '2005-07-22',
-      gender: 'female',
-      address: '456 Đường XYZ, Quận 2, TP.HCM',
-      className: '10A1',
-      course: 'Khóa 2023-2026',
-      status: 'active',
-      enrollmentDate: '2023-09-01'
-    },
-    {
-      id: 3,
-      studentCode: 'SV003',
-      fullName: 'Lê Văn Cường',
-      email: 'cuong.le@sms.com',
-      phone: '0369852147',
-      dateOfBirth: '2005-11-08',
-      gender: 'male',
-      address: '789 Đường DEF, Quận 3, TP.HCM',
-      className: '10A2',
-      course: 'Khóa 2023-2026',
-      status: 'active',
-      enrollmentDate: '2023-09-01'
-    },
-    {
-      id: 4,
-      studentCode: 'SV004',
-      fullName: 'Phạm Thị Dung',
-      email: 'dung.pham@sms.com',
-      phone: '0741852963',
-      dateOfBirth: '2005-01-30',
-      gender: 'female',
-      address: '321 Đường GHI, Quận 4, TP.HCM',
-      className: '10A2',
-      course: 'Khóa 2023-2026',
-      status: 'inactive',
-      enrollmentDate: '2023-09-01'
+  // Load students data
+  const loadStudents = async (page = 0, size = 10) => {
+    setLoading(true);
+    try {
+      const response = await studentService.getAllStudents(page, size);
+      console.log('Student API Response:', response); // Debug log
+      if (response.success) {
+        setStudents(response.data.students || []);
+        setPagination({
+          page: response.data.currentPage || 0,
+          size: response.data.pageSize || 10,
+          totalElements: response.data.totalElements || 0,
+          totalPages: response.data.totalPages || 0
+        });
+      } else {
+        console.error('Student API returned success: false', response.message);
+      }
+    } catch (error) {
+      console.error('Lỗi khi tải danh sách sinh viên:', error);
+      setStudents([]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
-  const classes = ['10A1', '10A2', '10A3', '11A1', '11A2', '12A1', '12A2'];
-  const courses = ['Khóa 2023-2026', 'Khóa 2022-2025', 'Khóa 2021-2024'];
+  // Search students
+  const searchStudents = async (searchRequest, page = 0, size = 10) => {
+    setLoading(true);
+    try {
+      const response = await studentService.searchStudents(searchRequest, page, size);
+      if (response.success) {
+        setStudents(response.data.students || []);
+        setPagination({
+          page: response.data.currentPage || 0,
+          size: response.data.pageSize || 10,
+          totalElements: response.data.totalElements || 0,
+          totalPages: response.data.totalPages || 0
+        });
+      }
+    } catch (error) {
+      console.error('Lỗi khi tìm kiếm sinh viên:', error);
+      setStudents([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
+    loadStudents();
+  }, []);
+
+  // Filter students based on search term, class, and course
   const filteredStudents = students.filter(student => {
-    const matchesSearch = student.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         student.studentCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         student.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = !searchTerm || 
+                         student.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         student.studentCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         student.email?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesClass = selectedClass === 'all' || student.className === selectedClass;
-    const matchesCourse = selectedCourse === 'all' || student.course === selectedCourse;
+    const matchesCourse = selectedCourse === 'all' || student.courseYear === selectedCourse;
     return matchesSearch && matchesClass && matchesCourse;
   });
 
-  const getStatusBadgeColor = (status) => {
-    return status === 'active' 
+  const getStatusBadgeColor = (isActive) => {
+    return isActive 
       ? 'bg-green-100 text-green-800' 
       : 'bg-gray-100 text-gray-800';
   };
 
   const getGenderText = (gender) => {
-    return gender === 'male' ? 'Nam' : 'Nữ';
+    switch (gender?.toLowerCase()) {
+      case 'male':
+      case 'nam':
+        return 'Nam';
+      case 'female':
+      case 'nữ':
+        return 'Nữ';
+      default:
+        return 'Khác';
+    }
   };
 
   const handleViewStudent = (student) => {
@@ -118,11 +126,51 @@ const StudentManagement = () => {
     setShowEditModal(true);
   };
 
-  const handleDeleteStudent = (student) => {
+  const handleDeleteStudent = async (student) => {
     if (window.confirm(`Bạn có chắc chắn muốn xóa sinh viên ${student.fullName}?`)) {
-      console.log('Delete student:', student.id);
+      try {
+        await studentService.deleteStudent(student.id);
+        loadStudents(pagination.page, pagination.size);
+      } catch (error) {
+        console.error('Lỗi khi xóa sinh viên:', error);
+      }
     }
   };
+
+  const handleCreateStudent = async (studentData) => {
+    try {
+      await studentService.createStudent(studentData);
+      setShowAddModal(false);
+      loadStudents();
+    } catch (error) {
+      console.error('Lỗi khi tạo sinh viên:', error);
+    }
+  };
+
+  const handleUpdateStudent = async (studentId, studentData) => {
+    try {
+      await studentService.updateStudent(studentId, studentData);
+      setShowEditModal(false);
+      loadStudents();
+    } catch (error) {
+      console.error('Lỗi khi cập nhật sinh viên:', error);
+    }
+  };
+
+  const handleSearch = () => {
+    const searchRequest = {
+      keyword: searchTerm.trim(),
+      className: selectedClass !== 'all' ? selectedClass : null,
+      courseYear: selectedCourse !== 'all' ? selectedCourse : null
+    };
+    
+    if (searchTerm.trim() || selectedClass !== 'all' || selectedCourse !== 'all') {
+      searchStudents(searchRequest);
+    } else {
+      loadStudents();
+    }
+  };
+
 
   const closeAllModals = () => {
     setShowAddModal(false);
@@ -193,7 +241,7 @@ const StudentManagement = () => {
               className="input-field"
             >
               <option value="all">Tất cả lớp</option>
-              {classes.map(cls => (
+              {Array.from(new Set(students.map(s => s.className).filter(Boolean))).map(cls => (
                 <option key={cls} value={cls}>{cls}</option>
               ))}
             </select>
@@ -205,8 +253,8 @@ const StudentManagement = () => {
               className="input-field"
             >
               <option value="all">Tất cả khóa</option>
-              {courses.map(course => (
-                <option key={course} value={course}>{course}</option>
+              {Array.from(new Set(students.map(s => s.courseYear).filter(Boolean))).map(course => (
+                <option key={course} value={course}>Khóa {course}</option>
               ))}
             </select>
           </div>
@@ -240,89 +288,101 @@ const StudentManagement = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredStudents.map((student) => (
-                <tr key={student.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10">
-                        <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                          <span className="text-sm font-medium text-gray-700">
-                            {student.fullName.split(' ').map(n => n[0]).join('')}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {student.fullName}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {student.studentCode}
-                        </div>
-                        <div className="text-xs text-gray-400">
-                          {getGenderText(student.gender)} • {new Date(student.dateOfBirth).toLocaleDateString('vi-VN')}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{student.email}</div>
-                    <div className="text-sm text-gray-500">{student.phone}</div>
-                    <div className="text-xs text-gray-400 truncate max-w-xs">{student.address}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center space-x-2">
-                      <AcademicCapIcon className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm font-medium text-gray-900">{student.className}</span>
-                    </div>
-                    <div className="text-sm text-gray-500">{student.course}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(student.status)}`}>
-                      {student.status === 'active' ? 'Đang học' : 'Nghỉ học'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <div className="flex items-center space-x-1">
-                      <CalendarIcon className="h-4 w-4" />
-                      <span>{new Date(student.enrollmentDate).toLocaleDateString('vi-VN')}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex justify-end space-x-2">
-                      <button 
-                        onClick={() => handleViewStudent(student)}
-                        className="text-indigo-600 hover:text-indigo-900"
-                        title="Xem chi tiết"
-                      >
-                        <EyeIcon className="h-4 w-4" />
-                      </button>
-                      <button 
-                        onClick={() => handleEditStudent(student)}
-                        className="text-yellow-600 hover:text-yellow-900"
-                        title="Chỉnh sửa"
-                      >
-                        <PencilIcon className="h-4 w-4" />
-                      </button>
-                      <button 
-                        onClick={() => handleDeleteStudent(student)}
-                        className="text-red-600 hover:text-red-900"
-                        title="Xóa"
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
+              {loading ? (
+                <tr>
+                  <td colSpan="6" className="px-6 py-4 text-center">
+                    <div className="flex justify-center items-center">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+                      <span className="ml-2 text-gray-500">Đang tải...</span>
                     </div>
                   </td>
                 </tr>
-              ))}
+              ) : filteredStudents.length > 0 ? (
+                filteredStudents.map((student) => (
+                  <tr key={student.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-10 w-10">
+                          <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                            <span className="text-sm font-medium text-gray-700">
+                              {student.fullName?.split(' ').map(n => n[0]).join('') || 'S'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            {student.fullName || 'N/A'}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {student.studentCode || 'N/A'}
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            {getGenderText(student.gender)} • {student.dob ? new Date(student.dob).toLocaleDateString('vi-VN') : 'N/A'}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{student.email || 'N/A'}</div>
+                      <div className="text-sm text-gray-500">{student.phone || 'N/A'}</div>
+                      <div className="text-xs text-gray-400 truncate max-w-xs">{student.address || 'N/A'}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        <AcademicCapIcon className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm font-medium text-gray-900">{student.className || 'N/A'}</span>
+                      </div>
+                      <div className="text-sm text-gray-500">Khóa {student.courseYear || 'N/A'}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(student.isActive)}`}>
+                        {student.isActive ? 'Đang học' : 'Nghỉ học'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <div className="flex items-center space-x-1">
+                        <CalendarIcon className="h-4 w-4" />
+                        <span>{student.createdAt ? new Date(student.createdAt).toLocaleDateString('vi-VN') : 'N/A'}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex justify-end space-x-2">
+                        <button 
+                          onClick={() => handleViewStudent(student)}
+                          className="text-indigo-600 hover:text-indigo-900"
+                          title="Xem chi tiết"
+                        >
+                          <EyeIcon className="h-4 w-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleEditStudent(student)}
+                          className="text-yellow-600 hover:text-yellow-900"
+                          title="Chỉnh sửa"
+                        >
+                          <PencilIcon className="h-4 w-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteStudent(student)}
+                          className="text-red-600 hover:text-red-900"
+                          title="Xóa"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
+                    {students.length === 0 ? 'Không có dữ liệu sinh viên' : 'Không tìm thấy sinh viên nào phù hợp với bộ lọc'}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
 
-        {filteredStudents.length === 0 && (
-          <div className="text-center py-8">
-            <p className="text-gray-500">Không tìm thấy sinh viên nào</p>
-          </div>
-        )}
       </div>
 
       {/* Add Student Modal */}
@@ -369,7 +429,8 @@ const StudentManagement = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Lớp</label>
                     <select className="input-field">
-                      {classes.map(cls => (
+                      <option value="">Chọn lớp</option>
+                      {Array.from(new Set(students.map(s => s.className).filter(Boolean))).map(cls => (
                         <option key={cls} value={cls}>{cls}</option>
                       ))}
                     </select>
@@ -377,8 +438,9 @@ const StudentManagement = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Khóa học</label>
                     <select className="input-field">
-                      {courses.map(course => (
-                        <option key={course} value={course}>{course}</option>
+                      <option value="">Chọn khóa</option>
+                      {Array.from(new Set(students.map(s => s.courseYear).filter(Boolean))).map(course => (
+                        <option key={course} value={course}>Khóa {course}</option>
                       ))}
                     </select>
                   </div>
@@ -473,16 +535,18 @@ const StudentManagement = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Lớp</label>
                     <select className="input-field" defaultValue={selectedStudent.className}>
-                      {classes.map(cls => (
+                      <option value="">Chọn lớp</option>
+                      {Array.from(new Set(students.map(s => s.className).filter(Boolean))).map(cls => (
                         <option key={cls} value={cls}>{cls}</option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Khóa học</label>
-                    <select className="input-field" defaultValue={selectedStudent.course}>
-                      {courses.map(course => (
-                        <option key={course} value={course}>{course}</option>
+                    <select className="input-field" defaultValue={selectedStudent.courseYear}>
+                      <option value="">Chọn khóa</option>
+                      {Array.from(new Set(students.map(s => s.courseYear).filter(Boolean))).map(course => (
+                        <option key={course} value={course}>Khóa {course}</option>
                       ))}
                     </select>
                   </div>
@@ -563,7 +627,7 @@ const StudentManagement = () => {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-500">Ngày sinh</label>
-                        <p className="mt-1 text-sm text-gray-900">{new Date(selectedStudent.dateOfBirth).toLocaleDateString('vi-VN')}</p>
+                        <p className="mt-1 text-sm text-gray-900">{selectedStudent.dob ? new Date(selectedStudent.dob).toLocaleDateString('vi-VN') : 'N/A'}</p>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-500">Giới tính</label>
@@ -607,19 +671,19 @@ const StudentManagement = () => {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-500">Khóa học</label>
-                        <p className="mt-1 text-sm text-gray-900">{selectedStudent.course}</p>
+                        <p className="mt-1 text-sm text-gray-900">Khóa {selectedStudent.courseYear || 'N/A'}</p>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-500">Ngày nhập học</label>
                         <p className="mt-1 text-sm text-gray-900 flex items-center">
                           <CalendarIcon className="h-4 w-4 mr-1" />
-                          {new Date(selectedStudent.enrollmentDate).toLocaleDateString('vi-VN')}
+                          {selectedStudent.createdAt ? new Date(selectedStudent.createdAt).toLocaleDateString('vi-VN') : 'N/A'}
                         </p>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-500">Trạng thái</label>
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(selectedStudent.status)}`}>
-                          {selectedStudent.status === 'active' ? 'Đang học' : 'Nghỉ học'}
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(selectedStudent.isActive)}`}>
+                          {selectedStudent.isActive ? 'Đang học' : 'Nghỉ học'}
                         </span>
                       </div>
                     </div>
@@ -639,8 +703,8 @@ const StudentManagement = () => {
                     <h3 className="text-lg font-medium text-gray-900">{selectedStudent.fullName}</h3>
                     <p className="text-sm text-gray-500">{selectedStudent.studentCode}</p>
                     <div className="mt-4">
-                      <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${getStatusBadgeColor(selectedStudent.status)}`}>
-                        {selectedStudent.status === 'active' ? 'Đang học' : 'Nghỉ học'}
+                      <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${getStatusBadgeColor(selectedStudent.isActive)}`}>
+                        {selectedStudent.isActive ? 'Đang học' : 'Nghỉ học'}
                       </span>
                     </div>
                   </div>
@@ -651,13 +715,13 @@ const StudentManagement = () => {
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-500">Thời gian học:</span>
                         <span className="text-sm font-medium text-gray-900">
-                          {Math.floor((new Date() - new Date(selectedStudent.enrollmentDate)) / (1000 * 60 * 60 * 24 * 30))} tháng
+                          {selectedStudent.createdAt ? Math.floor((new Date() - new Date(selectedStudent.createdAt)) / (1000 * 60 * 60 * 24 * 30)) : 0} tháng
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-500">Tuổi:</span>
                         <span className="text-sm font-medium text-gray-900">
-                          {new Date().getFullYear() - new Date(selectedStudent.dateOfBirth).getFullYear()} tuổi
+                          {selectedStudent.dob ? new Date().getFullYear() - new Date(selectedStudent.dob).getFullYear() : 'N/A'} tuổi
                         </span>
                       </div>
                     </div>

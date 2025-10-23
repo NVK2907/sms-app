@@ -29,17 +29,18 @@ const Sidebar = () => {
 
   // Menu items dựa trên role
   const getMenuItems = () => {
-    const role = user?.role?.name?.toLowerCase();
+    const role = user?.roles?.[0]?.roleName?.toLowerCase();
     
     const commonItems = [
-      { name: 'Trang chủ', path: '/', icon: HomeIcon },
+      { name: 'Trang chủ', path: '/dashboard', icon: HomeIcon },
       { name: 'Hồ sơ', path: '/profile', icon: UserGroupIcon },
     ];
 
     switch (role) {
       case 'admin':
         return [
-          ...commonItems,
+          { name: 'Trang chủ', path: '/admin/dashboard', icon: HomeIcon },
+          { name: 'Hồ sơ', path: '/profile', icon: UserGroupIcon },
           { name: 'Quản lý người dùng', path: '/admin/users', icon: UserGroupIcon },
           { name: 'Quản lý sinh viên', path: '/admin/students', icon: UserGroupIcon },
           { name: 'Quản lý giáo viên', path: '/admin/teachers', icon: AcademicCapIcon },
@@ -51,7 +52,8 @@ const Sidebar = () => {
       
       case 'teacher':
         return [
-          ...commonItems,
+          { name: 'Trang chủ', path: '/teacher/dashboard', icon: HomeIcon },
+          { name: 'Hồ sơ', path: '/profile', icon: UserGroupIcon },
           { name: 'Lớp học của tôi', path: '/teacher/classes', icon: AcademicCapIcon },
           { name: 'Môn học', path: '/teacher/subjects', icon: BookOpenIcon },
           { name: 'Lịch dạy', path: '/teacher/schedule', icon: CalendarIcon },
@@ -61,7 +63,8 @@ const Sidebar = () => {
       
       case 'student':
         return [
-          ...commonItems,
+          { name: 'Trang chủ', path: '/student/dashboard', icon: HomeIcon },
+          { name: 'Hồ sơ', path: '/profile', icon: UserGroupIcon },
           { name: 'Lớp học', path: '/student/classes', icon: AcademicCapIcon },
           { name: 'Môn học', path: '/student/subjects', icon: BookOpenIcon },
           { name: 'Lịch học', path: '/student/schedule', icon: CalendarIcon },

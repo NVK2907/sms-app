@@ -28,9 +28,29 @@ const Login = () => {
     setError('');
 
     try {
-      await login(formData);
-      navigate('/');
+      console.log('🔐 Attempting login with:', formData);
+      const user = await login(formData);
+      console.log('✅ Login successful, user data:', user);
+      
+      // Chuyển hướng dựa trên role
+      const userRole = user?.roles?.[0]?.roleName?.toLowerCase();
+      console.log('🎯 User role detected:', userRole);
+      
+      if (userRole === 'admin') {
+        console.log('🚀 Redirecting to admin dashboard');
+        navigate('/admin/dashboard');
+      } else if (userRole === 'teacher') {
+        console.log('🚀 Redirecting to teacher dashboard');
+        navigate('/teacher/dashboard');
+      } else if (userRole === 'student') {
+        console.log('🚀 Redirecting to student dashboard');
+        navigate('/student/dashboard');
+      } else {
+        console.log('🚀 Redirecting to default dashboard');
+        navigate('/dashboard');
+      }
     } catch (err) {
+      console.error('❌ Login failed:', err);
       setError(err.message || 'Đăng nhập thất bại');
     } finally {
       setLoading(false);

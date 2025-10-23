@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   PlusIcon,
   MagnifyingGlassIcon,
@@ -10,6 +10,7 @@ import {
   BookOpenIcon,
   CalendarIcon
 } from '@heroicons/react/24/outline';
+import { teacherService } from '../../services/teacherService';
 
 const TeacherManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,82 +18,52 @@ const TeacherManagement = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState(null);
+  const [teachers, setTeachers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [pagination, setPagination] = useState({
+    page: 0,
+    size: 10,
+    totalElements: 0,
+    totalPages: 0
+  });
 
-  // Mock data
-  const teachers = [
-    {
-      id: 1,
-      teacherCode: 'GV001',
-      fullName: 'Nguyễn Thị Minh',
-      email: 'minh.nguyen@sms.com',
-      phone: '0123456789',
-      dateOfBirth: '1985-05-15',
-      gender: 'female',
-      address: '123 Đường ABC, Quận 1, TP.HCM',
-      subjects: ['Toán học', 'Vật lý'],
-      classes: ['10A1', '10A2'],
-      status: 'active',
-      hireDate: '2020-09-01',
-      qualification: 'Thạc sĩ Toán học',
-      experience: '5 năm'
-    },
-    {
-      id: 2,
-      teacherCode: 'GV002',
-      fullName: 'Trần Văn Hùng',
-      email: 'hung.tran@sms.com',
-      phone: '0987654321',
-      dateOfBirth: '1980-08-22',
-      gender: 'male',
-      address: '456 Đường XYZ, Quận 2, TP.HCM',
-      subjects: ['Hóa học', 'Sinh học'],
-      classes: ['11A1', '11A2'],
-      status: 'active',
-      hireDate: '2018-09-01',
-      qualification: 'Tiến sĩ Hóa học',
-      experience: '7 năm'
-    },
-    {
-      id: 3,
-      teacherCode: 'GV003',
-      fullName: 'Lê Thị Lan',
-      email: 'lan.le@sms.com',
-      phone: '0369852147',
-      dateOfBirth: '1988-12-08',
-      gender: 'female',
-      address: '789 Đường DEF, Quận 3, TP.HCM',
-      subjects: ['Ngữ văn', 'Lịch sử'],
-      classes: ['12A1', '12A2'],
-      status: 'active',
-      hireDate: '2021-09-01',
-      qualification: 'Thạc sĩ Ngữ văn',
-      experience: '3 năm'
-    },
-    {
-      id: 4,
-      teacherCode: 'GV004',
-      fullName: 'Phạm Văn Đức',
-      email: 'duc.pham@sms.com',
-      phone: '0741852963',
-      dateOfBirth: '1975-03-30',
-      gender: 'male',
-      address: '321 Đường GHI, Quận 4, TP.HCM',
-      subjects: ['Tiếng Anh'],
-      classes: ['10A1', '11A1', '12A1'],
-      status: 'inactive',
-      hireDate: '2015-09-01',
-      qualification: 'Cử nhân Tiếng Anh',
-      experience: '9 năm'
+  // Load teachers data
+  const loadTeachers = async (page = 0, size = 10) => {
+    setLoading(true);
+    try {
+      const response = await teacherService.getAllTeachers(page, size);
+      console.log('Teacher API Response:', response); // Debug log
+      if (response.success) {
+        setTeachers(response.data.teachers || []);
+        setPagination({
+          page: response.data.currentPage || 0,
+          size: response.data.pageSize || 10,
+          totalElements: response.data.totalElements || 0,
+          totalPages: response.data.totalPages || 0
+        });
+      } else {
+        console.error('Teacher API returned success: false', response.message);
+      }
+    } catch (error) {
+      console.error('Lỗi khi tải danh sách giáo viên:', error);
+      setTeachers([]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
-  const subjects = ['Toán học', 'Vật lý', 'Hóa học', 'Sinh học', 'Ngữ văn', 'Lịch sử', 'Địa lý', 'Tiếng Anh', 'Tin học'];
+  useEffect(() => {
+    loadTeachers();
+  }, []);
 
+  // Filter teachers based on search term and subject
   const filteredTeachers = teachers.filter(teacher => {
-    const matchesSearch = teacher.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         teacher.teacherCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         teacher.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesSubject = selectedSubject === 'all' || teacher.subjects.includes(selectedSubject);
+    const matchesSearch = !searchTerm || 
+                         teacher.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         teacher.teacherCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         teacher.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSubject = selectedSubject === 'all' || 
+                          teacher.subjects?.some(subject => subject.subjectName === selectedSubject);
     return matchesSearch && matchesSubject;
   });
 
@@ -158,7 +129,7 @@ const TeacherManagement = () => {
               className="input-field"
             >
               <option value="all">Tất cả môn học</option>
-              {subjects.map(subject => (
+              {Array.from(new Set(teachers.flatMap(t => t.subjects?.map(s => s.subjectName) || []))).map(subject => (
                 <option key={subject} value={subject}>{subject}</option>
               ))}
             </select>
@@ -193,99 +164,111 @@ const TeacherManagement = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredTeachers.map((teacher) => (
-                <tr key={teacher.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10">
-                        <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                          <span className="text-sm font-medium text-gray-700">
-                            {teacher.fullName.split(' ').map(n => n[0]).join('')}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {teacher.fullName}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {teacher.teacherCode}
-                        </div>
-                        <div className="text-xs text-gray-400">
-                          {getGenderText(teacher.gender)} • {new Date(teacher.dateOfBirth).toLocaleDateString('vi-VN')}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{teacher.email}</div>
-                    <div className="text-sm text-gray-500">{teacher.phone}</div>
-                    <div className="text-xs text-gray-400 truncate max-w-xs">{teacher.address}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="space-y-1">
-                      <div className="flex items-center space-x-1">
-                        <BookOpenIcon className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm text-gray-900">
-                          {teacher.subjects.join(', ')}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <AcademicCapIcon className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm text-gray-500">
-                          {teacher.classes.join(', ')}
-                        </span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{teacher.qualification}</div>
-                    <div className="text-sm text-gray-500">{teacher.experience}</div>
-                    <div className="text-xs text-gray-400">
-                      Tuyển dụng: {new Date(teacher.hireDate).toLocaleDateString('vi-VN')}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(teacher.status)}`}>
-                      {teacher.status === 'active' ? 'Đang dạy' : 'Nghỉ việc'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex justify-end space-x-2">
-                      <button 
-                        onClick={() => handleEditTeacher(teacher)}
-                        className="text-indigo-600 hover:text-indigo-900"
-                        title="Xem chi tiết"
-                      >
-                        <EyeIcon className="h-4 w-4" />
-                      </button>
-                      <button 
-                        onClick={() => handleEditTeacher(teacher)}
-                        className="text-yellow-600 hover:text-yellow-900"
-                        title="Chỉnh sửa"
-                      >
-                        <PencilIcon className="h-4 w-4" />
-                      </button>
-                      <button 
-                        onClick={() => handleDeleteTeacher(teacher)}
-                        className="text-red-600 hover:text-red-900"
-                        title="Xóa"
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
+              {loading ? (
+                <tr>
+                  <td colSpan="6" className="px-6 py-4 text-center">
+                    <div className="flex justify-center items-center">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+                      <span className="ml-2 text-gray-500">Đang tải...</span>
                     </div>
                   </td>
                 </tr>
-              ))}
+              ) : filteredTeachers.length > 0 ? (
+                filteredTeachers.map((teacher) => (
+                  <tr key={teacher.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-10 w-10">
+                          <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                            <span className="text-sm font-medium text-gray-700">
+                              {teacher.fullName?.split(' ').map(n => n[0]).join('') || 'T'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            {teacher.fullName || 'N/A'}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {teacher.teacherCode || 'N/A'}
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            {getGenderText(teacher.gender)} • {teacher.dob ? new Date(teacher.dob).toLocaleDateString('vi-VN') : 'N/A'}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{teacher.email || 'N/A'}</div>
+                      <div className="text-sm text-gray-500">{teacher.phone || 'N/A'}</div>
+                      <div className="text-xs text-gray-400 truncate max-w-xs">{teacher.address || 'N/A'}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="space-y-1">
+                        <div className="flex items-center space-x-1">
+                          <BookOpenIcon className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm text-gray-900">
+                            {teacher.subjects?.map(s => s.subjectName).join(', ') || 'Chưa có môn'}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <AcademicCapIcon className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm text-gray-500">
+                            {teacher.classes?.join(', ') || 'Chưa có lớp'}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{teacher.qualification || 'N/A'}</div>
+                      <div className="text-sm text-gray-500">{teacher.experience || 'N/A'}</div>
+                      <div className="text-xs text-gray-400">
+                        Tuyển dụng: {teacher.hireDate ? new Date(teacher.hireDate).toLocaleDateString('vi-VN') : 'N/A'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(teacher.isActive)}`}>
+                        {teacher.isActive ? 'Đang dạy' : 'Nghỉ việc'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex justify-end space-x-2">
+                        <button 
+                          onClick={() => handleEditTeacher(teacher)}
+                          className="text-indigo-600 hover:text-indigo-900"
+                          title="Xem chi tiết"
+                        >
+                          <EyeIcon className="h-4 w-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleEditTeacher(teacher)}
+                          className="text-yellow-600 hover:text-yellow-900"
+                          title="Chỉnh sửa"
+                        >
+                          <PencilIcon className="h-4 w-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteTeacher(teacher)}
+                          className="text-red-600 hover:text-red-900"
+                          title="Xóa"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
+                    {teachers.length === 0 ? 'Không có dữ liệu giáo viên' : 'Không tìm thấy giáo viên nào phù hợp với bộ lọc'}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
 
-        {filteredTeachers.length === 0 && (
-          <div className="text-center py-8">
-            <p className="text-gray-500">Không tìm thấy giáo viên nào</p>
-          </div>
-        )}
       </div>
 
       {/* Add Teacher Modal */}

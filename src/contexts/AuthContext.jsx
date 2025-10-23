@@ -16,39 +16,62 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // BYPASS LOGIN - Mock user data để phát triển giao diện
-    const mockUser = {
-      id: 1,
-      username: 'admin',
-      email: 'admin@sms.com',
-      fullName: 'Quản trị viên',
-      role: {
-        id: 1,
-        name: 'admin'
+    // Kiểm tra user đã đăng nhập chưa
+    const initializeAuth = async () => {
+      try {
+        const currentUser = authService.getCurrentUser();
+        const isAuth = authService.isAuthenticated();
+        
+        console.log('🔐 AuthContext: Initializing auth state');
+        console.log('🔐 AuthContext: Current user from localStorage:', currentUser);
+        console.log('🔐 AuthContext: Is authenticated:', isAuth);
+        
+        if (currentUser && isAuth) {
+          // Validate token với server để đảm bảo token còn hợp lệ
+          try {
+            const isValid = await authService.validateToken();
+            if (isValid) {
+              setUser(currentUser);
+              console.log('🔐 AuthContext: User authenticated and token valid');
+            } else {
+              console.log('🔐 AuthContext: Token invalid, clearing auth');
+              authService.logout();
+              setUser(null);
+            }
+          } catch (error) {
+            console.log('🔐 AuthContext: Token validation failed, clearing auth');
+            authService.logout();
+            setUser(null);
+          }
+        } else {
+          console.log('🔐 AuthContext: No user or not authenticated');
+          setUser(null);
+        }
+      } catch (error) {
+        console.error('🔐 AuthContext: Error initializing auth:', error);
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
     };
     
-    // Lưu mock user vào localStorage để bypass authentication
-    localStorage.setItem('user', JSON.stringify(mockUser));
-    localStorage.setItem('token', 'mock-token-for-development');
-    
-    setUser(mockUser);
-    setLoading(false);
-    
-    // Code gốc (đã comment để bypass):
-    // const currentUser = authService.getCurrentUser();
-    // if (currentUser && authService.isAuthenticated()) {
-    //   setUser(currentUser);
-    // }
-    // setLoading(false);
+    initializeAuth();
   }, []);
 
   const login = async (credentials) => {
     try {
-      const { user: userData } = await authService.login(credentials);
+      console.log('🔐 AuthContext: Starting login process');
+      const result = await authService.login(credentials);
+      console.log('🔐 AuthContext: Login result from service:', result);
+      
+      const userData = result.user;
+      console.log('🔐 AuthContext: User data to set:', userData);
+      
       setUser(userData);
+      console.log('🔐 AuthContext: User set in context');
       return userData;
     } catch (error) {
+      console.error('❌ AuthContext: Login error:', error);
       throw error;
     }
   };
