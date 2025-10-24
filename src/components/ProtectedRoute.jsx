@@ -28,8 +28,18 @@ const ProtectedRoute = ({ children, requiredRole }) => {
   }
 
   if (requiredRole && user?.roles?.[0]?.roleName?.toLowerCase() !== requiredRole.toLowerCase()) {
-    console.log('🔐 ProtectedRoute: Role mismatch, redirecting to home');
-    return <Navigate to="/" replace />;
+    console.log('🔐 ProtectedRoute: Role mismatch, redirecting to appropriate dashboard');
+    const userRole = user?.roles?.[0]?.roleName?.toLowerCase();
+    switch (userRole) {
+      case 'admin':
+        return <Navigate to="/admin/dashboard" replace />;
+      case 'teacher':
+        return <Navigate to="/teacher/dashboard" replace />;
+      case 'student':
+        return <Navigate to="/student/dashboard" replace />;
+      default:
+        return <Navigate to="/dashboard" replace />;
+    }
   }
 
   console.log('🔐 ProtectedRoute: Access granted, rendering children');

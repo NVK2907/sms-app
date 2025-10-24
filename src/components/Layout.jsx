@@ -2,7 +2,6 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
-import DevLogin from './DevLogin';
 
 const Layout = ({ children }) => {
   return (
@@ -14,7 +13,6 @@ const Layout = ({ children }) => {
           {children || <Outlet />}
         </main>
       </div>
-      <DevLogin />
     </div>
   );
 };

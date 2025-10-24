@@ -8,6 +8,7 @@ import {
   UserIcon
 } from '@heroicons/react/24/outline';
 import { userService } from '../../services/userService';
+import Pagination from '../../components/Pagination';
 
 const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -377,10 +378,20 @@ const UserManagement = () => {
 
       </div>
 
+      {/* Pagination */}
+      <Pagination
+        currentPage={pagination.page}
+        totalPages={pagination.totalPages}
+        totalElements={pagination.totalElements}
+        pageSize={pagination.size}
+        onPageChange={(page) => loadUsers(page, pagination.size)}
+        itemName="người dùng"
+      />
+
       {/* Add User Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div className={`fixed inset-0 bg-gray-800/10 backdrop-blur-[2px] flex items-center justify-center z-50 transition-opacity duration-300 ${showAddModal ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="relative p-5 border w-96 shadow-lg rounded-md bg-white">
             <div className="mt-3">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Thêm người dùng mới</h3>
               <form className="space-y-4">
@@ -428,8 +439,8 @@ const UserManagement = () => {
 
       {/* Edit User Modal */}
       {showEditModal && selectedUser && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div className={`fixed inset-0 bg-gray-800/10 backdrop-blur-[2px] flex items-center justify-center z-50 transition-opacity duration-300 ${showEditModal ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="relative p-5 border w-96 shadow-lg rounded-md bg-white">
             <div className="mt-3">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Chỉnh sửa người dùng</h3>
               <form className="space-y-4">
@@ -495,8 +506,8 @@ const UserManagement = () => {
 
       {/* Reset Password Modal */}
       {showResetPasswordModal && selectedUser && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div className={`fixed inset-0 bg-gray-800/10 backdrop-blur-[2px] flex items-center justify-center z-50 transition-opacity duration-300 ${showResetPasswordModal ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="relative p-5 border w-96 shadow-lg rounded-md bg-white">
             <div className="mt-3">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Đặt lại mật khẩu</h3>
               <p className="text-sm text-gray-600 mb-4">
@@ -541,7 +552,8 @@ const UserManagement = () => {
 
        {/* View User Details Popup */}
        {showViewModal && selectedUser && (
-         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+         <div className={`fixed inset-0 bg-gray-800/10 backdrop-blur-[2px] flex items-center justify-center z-50 transition-opacity duration-300 ${showViewModal ? 'opacity-100' : 'opacity-0'}`}>
+
            <div 
              className="absolute inset-0" 
              onClick={() => setShowViewModal(false)}

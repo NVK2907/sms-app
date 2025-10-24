@@ -18,8 +18,8 @@ export const authService = {
           email: data.userInfo.email,
           fullName: data.userInfo.fullName,
           phone: data.userInfo.phone,
-          roles: data.userInfo.roles.map(role => ({
-            id: 1, // Default ID for role
+          roles: data.userInfo.roles.map((role, index) => ({
+            id: index + 1,
             roleName: role,
             description: role
           })),

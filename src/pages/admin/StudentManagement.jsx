@@ -11,6 +11,7 @@ import {
   CalendarIcon
 } from '@heroicons/react/24/outline';
 import { studentService } from '../../services/studentService';
+import Pagination from '../../components/Pagination';
 
 const StudentManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -385,14 +386,24 @@ const StudentManagement = () => {
 
       </div>
 
+      {/* Pagination */}
+      <Pagination
+        currentPage={pagination.page}
+        totalPages={pagination.totalPages}
+        totalElements={pagination.totalElements}
+        pageSize={pagination.size}
+        onPageChange={(page) => loadStudents(page, pagination.size)}
+        itemName="sinh viên"
+      />
+
       {/* Add Student Modal */}
       {showAddModal && (
         <div 
-          className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
+          className={`fixed inset-0 bg-gray-800/10 backdrop-blur-[2px] flex items-center justify-center z-50 transition-opacity duration-300 ${showAddModal ? 'opacity-100' : 'opacity-0'}`}
           onClick={closeAllModals}
         >
           <div 
-            className="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white"
+            className="relative p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mt-3">
@@ -470,11 +481,11 @@ const StudentManagement = () => {
       {/* Edit Student Modal */}
       {showEditModal && selectedStudent && (
         <div 
-          className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
+          className={`fixed inset-0 bg-gray-800/10 backdrop-blur-[2px] flex items-center justify-center z-50 transition-opacity duration-300 ${showEditModal ? 'opacity-100' : 'opacity-0'}`}
           onClick={closeAllModals}
         >
           <div 
-            className="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white"
+            className="relative p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mt-3">
@@ -588,11 +599,11 @@ const StudentManagement = () => {
       {/* View Student Details Modal */}
       {showViewModal && selectedStudent && (
         <div 
-          className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
+          className={`fixed inset-0 bg-gray-800/10 backdrop-blur-[2px] flex items-center justify-center z-50 transition-opacity duration-300 ${showViewModal ? 'opacity-100' : 'opacity-0'}`}
           onClick={closeAllModals}
         >
           <div 
-            className="relative top-10 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white"
+            className="relative p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mt-3">

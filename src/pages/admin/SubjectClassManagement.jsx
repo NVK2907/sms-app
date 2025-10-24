@@ -12,6 +12,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { subjectService } from '../../services/subjectService';
 import { classService } from '../../services/classService';
+import Pagination from '../../components/Pagination';
 
 const SubjectClassManagement = () => {
   const [activeTab, setActiveTab] = useState('subjects');
@@ -19,19 +20,32 @@ const SubjectClassManagement = () => {
   const [showAddSubjectModal, setShowAddSubjectModal] = useState(false);
   const [showAddClassModal, setShowAddClassModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [subjects, setSubjects] = useState([]);
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [pagination, setPagination] = useState({
+    page: 0,
+    size: 10,
+    totalElements: 0,
+    totalPages: 0
+  });
 
   // Load data from API
-  const loadSubjects = async () => {
+  const loadSubjects = async (page = 0, size = 10) => {
     setLoading(true);
     try {
-      const response = await subjectService.getAllSubjects();
+      const response = await subjectService.getAllSubjects(page, size);
       console.log('Subject API Response:', response); // Debug log
       if (response.success) {
         setSubjects(response.data.subjects || []);
+        setPagination({
+          page: response.data.currentPage || 0,
+          size: response.data.pageSize || 10,
+          totalElements: response.data.totalElements || 0,
+          totalPages: response.data.totalPages || 0
+        });
       } else {
         console.error('Subject API returned success: false', response.message);
       }
@@ -43,13 +57,19 @@ const SubjectClassManagement = () => {
     }
   };
 
-  const loadClasses = async () => {
+  const loadClasses = async (page = 0, size = 10) => {
     setLoading(true);
     try {
-      const response = await classService.getAllClasses();
+      const response = await classService.getAllClasses(page, size);
       console.log('Class API Response:', response); // Debug log
       if (response.success) {
         setClasses(response.data.classes || []);
+        setPagination({
+          page: response.data.currentPage || 0,
+          size: response.data.pageSize || 10,
+          totalElements: response.data.totalElements || 0,
+          totalPages: response.data.totalPages || 0
+        });
       } else {
         console.error('Class API returned success: false', response.message);
       }
@@ -78,6 +98,11 @@ const SubjectClassManagement = () => {
     cls.className?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     cls.classCode?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleViewItem = (item) => {
+    setSelectedItem(item);
+    setShowViewModal(true);
+  };
 
   const handleEditItem = (item) => {
     setSelectedItem(item);
@@ -217,7 +242,7 @@ const SubjectClassManagement = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end space-x-2">
                           <button
-                            onClick={() => handleEditItem(subject)}
+                            onClick={() => handleViewItem(subject)}
                             className="text-indigo-600 hover:text-indigo-900"
                             title="Xem chi tiết"
                           >
@@ -326,7 +351,7 @@ const SubjectClassManagement = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end space-x-2">
                           <button
-                            onClick={() => handleEditItem(cls)}
+                            onClick={() => handleViewItem(cls)}
                             className="text-indigo-600 hover:text-indigo-900"
                             title="Xem chi tiết"
                           >
@@ -363,7 +388,470 @@ const SubjectClassManagement = () => {
         </div>
       )}
 
-      {/* Modals will be implemented later */}
+      {/* Pagination */}
+      <Pagination
+        currentPage={pagination.page}
+        totalPages={pagination.totalPages}
+        totalElements={pagination.totalElements}
+        pageSize={pagination.size}
+        onPageChange={(page) => activeTab === 'subjects' ? loadSubjects(page, pagination.size) : loadClasses(page, pagination.size)}
+        itemName={activeTab === 'subjects' ? 'môn học' : 'lớp học'}
+      />
+
+      {/* Add Subject Modal */}
+      {showAddSubjectModal && (
+        <div className={`fixed inset-0 bg-gray-800/10 backdrop-blur-[2px] flex items-center justify-center z-50 transition-opacity duration-300 ${showAddSubjectModal ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="relative p-6 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Thêm môn học mới</h3>
+              <button
+                onClick={() => setShowAddSubjectModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <form className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Tên môn học</label>
+                  <input type="text" className="input-field" placeholder="Nhập tên môn học" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Mã môn học</label>
+                  <input type="text" className="input-field" placeholder="Nhập mã môn học" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Số tín chỉ</label>
+                  <input type="number" className="input-field" placeholder="Nhập số tín chỉ" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Trạng thái</label>
+                  <select className="input-field">
+                    <option value="active">Hoạt động</option>
+                    <option value="inactive">Không hoạt động</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Mô tả</label>
+                <textarea className="input-field" rows="3" placeholder="Nhập mô tả môn học"></textarea>
+              </div>
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowAddSubjectModal(false)}
+                  className="btn-secondary"
+                >
+                  Hủy
+                </button>
+                <button type="submit" className="btn-primary">
+                  Thêm môn học
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Class Modal */}
+      {showAddClassModal && (
+        <div className={`fixed inset-0 bg-gray-800/10 backdrop-blur-[2px] flex items-center justify-center z-50 transition-opacity duration-300 ${showAddClassModal ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="relative p-6 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Thêm lớp học mới</h3>
+              <button
+                onClick={() => setShowAddClassModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <form className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Tên lớp học</label>
+                  <input type="text" className="input-field" placeholder="Nhập tên lớp học" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Mã lớp học</label>
+                  <input type="text" className="input-field" placeholder="Nhập mã lớp học" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Khối</label>
+                  <input type="text" className="input-field" placeholder="Nhập khối" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Năm học</label>
+                  <input type="text" className="input-field" placeholder="Nhập năm học" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Số sinh viên tối đa</label>
+                  <input type="number" className="input-field" placeholder="Nhập số sinh viên tối đa" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Trạng thái</label>
+                  <select className="input-field">
+                    <option value="active">Hoạt động</option>
+                    <option value="inactive">Không hoạt động</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowAddClassModal(false)}
+                  className="btn-secondary"
+                >
+                  Hủy
+                </button>
+                <button type="submit" className="btn-primary">
+                  Thêm lớp học
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && selectedItem && (
+        <div className={`fixed inset-0 bg-gray-800/10 backdrop-blur-[2px] flex items-center justify-center z-50 transition-opacity duration-300 ${showEditModal ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="relative p-6 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Chỉnh sửa {activeTab === 'subjects' ? 'môn học' : 'lớp học'}
+              </h3>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <form className="space-y-4">
+              {activeTab === 'subjects' ? (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Tên môn học</label>
+                      <input 
+                        type="text" 
+                        className="input-field" 
+                        defaultValue={selectedItem.subjectName}
+                        placeholder="Nhập tên môn học" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Mã môn học</label>
+                      <input 
+                        type="text" 
+                        className="input-field" 
+                        defaultValue={selectedItem.subjectCode}
+                        placeholder="Nhập mã môn học" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Số tín chỉ</label>
+                      <input 
+                        type="number" 
+                        className="input-field" 
+                        defaultValue={selectedItem.credits}
+                        placeholder="Nhập số tín chỉ" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Trạng thái</label>
+                      <select className="input-field" defaultValue={selectedItem.status}>
+                        <option value="active">Hoạt động</option>
+                        <option value="inactive">Không hoạt động</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Mô tả</label>
+                    <textarea 
+                      className="input-field" 
+                      rows="3" 
+                      defaultValue={selectedItem.description}
+                      placeholder="Nhập mô tả môn học"
+                    ></textarea>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Tên lớp học</label>
+                      <input 
+                        type="text" 
+                        className="input-field" 
+                        defaultValue={selectedItem.className}
+                        placeholder="Nhập tên lớp học" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Mã lớp học</label>
+                      <input 
+                        type="text" 
+                        className="input-field" 
+                        defaultValue={selectedItem.classCode}
+                        placeholder="Nhập mã lớp học" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Khối</label>
+                      <input 
+                        type="text" 
+                        className="input-field" 
+                        defaultValue={selectedItem.grade}
+                        placeholder="Nhập khối" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Năm học</label>
+                      <input 
+                        type="text" 
+                        className="input-field" 
+                        defaultValue={selectedItem.academicYear}
+                        placeholder="Nhập năm học" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Số sinh viên tối đa</label>
+                      <input 
+                        type="number" 
+                        className="input-field" 
+                        defaultValue={selectedItem.maxStudents}
+                        placeholder="Nhập số sinh viên tối đa" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Trạng thái</label>
+                      <select className="input-field" defaultValue={selectedItem.status}>
+                        <option value="active">Hoạt động</option>
+                        <option value="inactive">Không hoạt động</option>
+                      </select>
+                    </div>
+                  </div>
+                </>
+              )}
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="btn-secondary"
+                >
+                  Hủy
+                </button>
+                <button type="submit" className="btn-primary">
+                  Cập nhật
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* View Details Modal */}
+      {showViewModal && selectedItem && (
+        <div className={`fixed inset-0 bg-gray-800/10 backdrop-blur-[2px] flex items-center justify-center z-50 transition-opacity duration-300 ${showViewModal ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="relative p-6 border w-full max-w-4xl shadow-lg rounded-md bg-white">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold text-gray-900">
+                Chi tiết {activeTab === 'subjects' ? 'môn học' : 'lớp học'}
+              </h3>
+              <button
+                onClick={() => setShowViewModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Thông tin chính */}
+              <div className="lg:col-span-2 space-y-6">
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    {activeTab === 'subjects' ? (
+                      <BookOpenIcon className="h-5 w-5 mr-2" />
+                    ) : (
+                      <AcademicCapIcon className="h-5 w-5 mr-2" />
+                    )}
+                    Thông tin {activeTab === 'subjects' ? 'môn học' : 'lớp học'}
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-500">
+                        {activeTab === 'subjects' ? 'Tên môn học' : 'Tên lớp học'}
+                      </label>
+                      <p className="mt-1 text-sm text-gray-900">
+                        {activeTab === 'subjects' ? selectedItem.subjectName : selectedItem.className}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-500">
+                        {activeTab === 'subjects' ? 'Mã môn học' : 'Mã lớp học'}
+                      </label>
+                      <p className="mt-1 text-sm text-gray-900 font-mono">
+                        {activeTab === 'subjects' ? selectedItem.subjectCode : selectedItem.classCode}
+                      </p>
+                    </div>
+                    {activeTab === 'subjects' ? (
+                      <>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-500">Số tín chỉ</label>
+                          <p className="mt-1 text-sm text-gray-900">{selectedItem.credits || 0} tín chỉ</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-500">Trạng thái</label>
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            selectedItem.status === 'active' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {selectedItem.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-500">Khối</label>
+                          <p className="mt-1 text-sm text-gray-900">{selectedItem.grade || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-500">Năm học</label>
+                          <p className="mt-1 text-sm text-gray-900">{selectedItem.academicYear || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-500">Số sinh viên</label>
+                          <p className="mt-1 text-sm text-gray-900">
+                            {selectedItem.studentCount || 0}/{selectedItem.maxStudents || 0} sinh viên
+                          </p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-500">Trạng thái</label>
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            selectedItem.status === 'active' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {selectedItem.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {activeTab === 'subjects' && (
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <h4 className="text-lg font-medium text-gray-900 mb-4">Mô tả</h4>
+                    <p className="text-sm text-gray-900">{selectedItem.description || 'Chưa có mô tả'}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Avatar và thông tin tóm tắt */}
+              <div className="space-y-6">
+                <div className="bg-gray-50 rounded-lg p-6 text-center">
+                  <div className="flex justify-center mb-4">
+                    <div className="h-24 w-24 rounded-full bg-indigo-100 flex items-center justify-center">
+                      {activeTab === 'subjects' ? (
+                        <BookOpenIcon className="h-12 w-12 text-indigo-600" />
+                      ) : (
+                        <AcademicCapIcon className="h-12 w-12 text-indigo-600" />
+                      )}
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900">
+                    {activeTab === 'subjects' ? selectedItem.subjectName : selectedItem.className}
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    {activeTab === 'subjects' ? selectedItem.subjectCode : selectedItem.classCode}
+                  </p>
+                  <div className="mt-4">
+                    <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
+                      selectedItem.status === 'active' 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {selectedItem.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <h4 className="text-lg font-medium text-gray-900 mb-4">Thống kê</h4>
+                  <div className="space-y-3">
+                    {activeTab === 'subjects' ? (
+                      <>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-500">Số tín chỉ:</span>
+                          <span className="text-sm font-medium text-gray-900">{selectedItem.credits || 0}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-500">Trạng thái:</span>
+                          <span className="text-sm font-medium text-gray-900">
+                            {selectedItem.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-500">Số sinh viên:</span>
+                          <span className="text-sm font-medium text-gray-900">
+                            {selectedItem.studentCount || 0}/{selectedItem.maxStudents || 0}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-500">Khối:</span>
+                          <span className="text-sm font-medium text-gray-900">{selectedItem.grade || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-500">Năm học:</span>
+                          <span className="text-sm font-medium text-gray-900">{selectedItem.academicYear || 'N/A'}</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={() => setShowViewModal(false)}
+                className="btn-secondary"
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowViewModal(false);
+                  handleEditItem(selectedItem);
+                }}
+                className="btn-primary"
+              >
+                Chỉnh sửa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

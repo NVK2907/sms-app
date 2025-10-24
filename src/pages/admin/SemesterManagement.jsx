@@ -12,6 +12,7 @@ import {
   ClockIcon
 } from '@heroicons/react/24/outline';
 import { semesterService } from '../../services/semesterService';
+import Pagination from '../../components/Pagination';
 
 const SemesterManagement = () => {
   const [activeTab, setActiveTab] = useState('semesters');
@@ -19,21 +20,39 @@ const SemesterManagement = () => {
   const [showAddSemesterModal, setShowAddSemesterModal] = useState(false);
   const [showAddAcademicYearModal, setShowAddAcademicYearModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [semesters, setSemesters] = useState([]);
   const [academicYears, setAcademicYears] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [pagination, setPagination] = useState({
+    page: 0,
+    size: 10,
+    totalElements: 0,
+    totalPages: 0
+  });
 
   // Load data from API
-  const loadSemesters = async () => {
+  const loadSemesters = async (page = 0, size = 10) => {
     setLoading(true);
     try {
-      const response = await semesterService.getAllSemesters();
+      const response = await semesterService.getAllSemesters(page, size);
       console.log('Semester API Response:', response); // Debug log
+      console.log('Semester data structure:', response.data); // Debug log
       if (response.success) {
-        setSemesters(response.data.semesters || []);
+        // Try different possible data structures
+        const semestersData = response.data.semesters || response.data.content || response.data || [];
+        console.log('Processed semesters data:', semestersData);
+        setSemesters(semestersData);
+        setPagination({
+          page: response.data.currentPage || 0,
+          size: response.data.pageSize || 10,
+          totalElements: response.data.totalElements || 0,
+          totalPages: response.data.totalPages || 0
+        });
       } else {
         console.error('Semester API returned success: false', response.message);
+        setSemesters([]);
       }
     } catch (error) {
       console.error('Lỗi khi tải danh sách học kỳ:', error);
@@ -43,15 +62,26 @@ const SemesterManagement = () => {
     }
   };
 
-  const loadAcademicYears = async () => {
+  const loadAcademicYears = async (page = 0, size = 10) => {
     setLoading(true);
     try {
-      const response = await semesterService.getAllAcademicYears();
+      const response = await semesterService.getAllAcademicYears(page, size);
       console.log('Academic Year API Response:', response); // Debug log
+      console.log('Academic Year data structure:', response.data); // Debug log
       if (response.success) {
-        setAcademicYears(response.data.academicYears || []);
+        // Try different possible data structures
+        const academicYearsData = response.data.academicYears || response.data.content || response.data || [];
+        console.log('Processed academic years data:', academicYearsData);
+        setAcademicYears(academicYearsData);
+        setPagination({
+          page: response.data.currentPage || 0,
+          size: response.data.pageSize || 10,
+          totalElements: response.data.totalElements || 0,
+          totalPages: response.data.totalPages || 0
+        });
       } else {
         console.error('Academic Year API returned success: false', response.message);
+        setAcademicYears([]);
       }
     } catch (error) {
       console.error('Lỗi khi tải danh sách năm học:', error);
@@ -70,13 +100,18 @@ const SemesterManagement = () => {
   }, [activeTab]);
 
   const filteredSemesters = semesters.filter(semester =>
-    semester.semesterName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    semester.academicYear?.toLowerCase().includes(searchTerm.toLowerCase())
+    semester.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    semester.academicYearName?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredAcademicYears = academicYears.filter(year =>
     year.academicYear?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleViewItem = (item) => {
+    setSelectedItem(item);
+    setShowViewModal(true);
+  };
 
   const handleEditItem = (item) => {
     setSelectedItem(item);
@@ -89,30 +124,14 @@ const SemesterManagement = () => {
     }
   };
 
-  const getStatusBadgeColor = (status) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-800';
-      case 'inactive':
-        return 'bg-gray-100 text-gray-800';
-      case 'upcoming':
-        return 'bg-blue-100 text-blue-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+  const getStatusBadgeColor = (isOpen) => {
+    return isOpen 
+      ? 'bg-green-100 text-green-800' 
+      : 'bg-gray-100 text-gray-800';
   };
 
-  const getStatusText = (status) => {
-    switch (status) {
-      case 'active':
-        return 'Đang hoạt động';
-      case 'inactive':
-        return 'Không hoạt động';
-      case 'upcoming':
-        return 'Sắp tới';
-      default:
-        return 'Không xác định';
-    }
+  const getStatusText = (isOpen) => {
+    return isOpen ? 'Đang mở' : 'Đã đóng';
   };
 
   return (
@@ -218,16 +237,16 @@ const SemesterManagement = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
                           <div className="text-sm font-medium text-gray-900">
-                            {semester.semesterName || 'N/A'}
+                            {semester.name || 'N/A'}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {semester.semesterCode || 'N/A'}
+                            ID: {semester.id}
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">
-                          {semester.academicYear || 'N/A'}
+                          {semester.academicYearName || 'N/A'}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -236,14 +255,14 @@ const SemesterManagement = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(semester.status)}`}>
-                          {getStatusText(semester.status)}
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(semester.isOpen)}`}>
+                          {getStatusText(semester.isOpen)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end space-x-2">
                           <button
-                            onClick={() => handleEditItem(semester)}
+                            onClick={() => handleViewItem(semester)}
                             className="text-indigo-600 hover:text-indigo-900"
                             title="Xem chi tiết"
                           >
@@ -334,7 +353,7 @@ const SemesterManagement = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end space-x-2">
                           <button
-                            onClick={() => handleEditItem(year)}
+                            onClick={() => handleViewItem(year)}
                             className="text-indigo-600 hover:text-indigo-900"
                             title="Xem chi tiết"
                           >
@@ -371,7 +390,440 @@ const SemesterManagement = () => {
         </div>
       )}
 
-      {/* Modals will be implemented later */}
+      {/* Pagination */}
+      <Pagination
+        currentPage={pagination.page}
+        totalPages={pagination.totalPages}
+        totalElements={pagination.totalElements}
+        pageSize={pagination.size}
+        onPageChange={(page) => activeTab === 'semesters' ? loadSemesters(page, pagination.size) : loadAcademicYears(page, pagination.size)}
+        itemName={activeTab === 'semesters' ? 'học kỳ' : 'năm học'}
+      />
+
+      {/* Add Semester Modal */}
+      {showAddSemesterModal && (
+        <div className={`fixed inset-0 bg-gray-800/10 backdrop-blur-[2px] flex items-center justify-center z-50 transition-opacity duration-300 ${showAddSemesterModal ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="relative p-6 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Thêm học kỳ mới</h3>
+              <button
+                onClick={() => setShowAddSemesterModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <form className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Tên học kỳ</label>
+                  <input type="text" className="input-field" placeholder="Nhập tên học kỳ" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Mã học kỳ</label>
+                  <input type="text" className="input-field" placeholder="Nhập mã học kỳ" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Năm học</label>
+                  <select className="input-field">
+                    <option value="">Chọn năm học</option>
+                    {academicYears.map(year => (
+                      <option key={year.id} value={year.academicYear}>{year.academicYear}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Trạng thái</label>
+                  <select className="input-field">
+                    <option value="active">Đang hoạt động</option>
+                    <option value="inactive">Không hoạt động</option>
+                    <option value="upcoming">Sắp tới</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Ngày bắt đầu</label>
+                  <input type="date" className="input-field" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Ngày kết thúc</label>
+                  <input type="date" className="input-field" />
+                </div>
+              </div>
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowAddSemesterModal(false)}
+                  className="btn-secondary"
+                >
+                  Hủy
+                </button>
+                <button type="submit" className="btn-primary">
+                  Thêm học kỳ
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Academic Year Modal */}
+      {showAddAcademicYearModal && (
+        <div className={`fixed inset-0 bg-gray-800/10 backdrop-blur-[2px] flex items-center justify-center z-50 transition-opacity duration-300 ${showAddAcademicYearModal ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="relative p-6 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Thêm năm học mới</h3>
+              <button
+                onClick={() => setShowAddAcademicYearModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <form className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Năm học</label>
+                  <input type="text" className="input-field" placeholder="Nhập năm học (VD: 2024-2025)" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Trạng thái</label>
+                  <select className="input-field">
+                    <option value="active">Đang hoạt động</option>
+                    <option value="inactive">Không hoạt động</option>
+                    <option value="upcoming">Sắp tới</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Ngày bắt đầu</label>
+                  <input type="date" className="input-field" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Ngày kết thúc</label>
+                  <input type="date" className="input-field" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Mô tả</label>
+                <textarea className="input-field" rows="3" placeholder="Nhập mô tả năm học"></textarea>
+              </div>
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowAddAcademicYearModal(false)}
+                  className="btn-secondary"
+                >
+                  Hủy
+                </button>
+                <button type="submit" className="btn-primary">
+                  Thêm năm học
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && selectedItem && (
+        <div className={`fixed inset-0 bg-gray-800/10 backdrop-blur-[2px] flex items-center justify-center z-50 transition-opacity duration-300 ${showEditModal ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="relative p-6 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Chỉnh sửa {activeTab === 'semesters' ? 'học kỳ' : 'năm học'}
+              </h3>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <form className="space-y-4">
+              {activeTab === 'semesters' ? (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Tên học kỳ</label>
+                      <input 
+                        type="text" 
+                        className="input-field" 
+                        defaultValue={selectedItem.name}
+                        placeholder="Nhập tên học kỳ" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">ID học kỳ</label>
+                      <input 
+                        type="text" 
+                        className="input-field" 
+                        defaultValue={selectedItem.id}
+                        placeholder="ID học kỳ" 
+                        disabled
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Năm học</label>
+                      <select className="input-field" defaultValue={selectedItem.academicYearName}>
+                        <option value="">Chọn năm học</option>
+                        {academicYears.map(year => (
+                          <option key={year.id} value={year.academicYear}>{year.academicYear}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Trạng thái</label>
+                      <select className="input-field" defaultValue={selectedItem.isOpen ? 'true' : 'false'}>
+                        <option value="true">Đang mở</option>
+                        <option value="false">Đã đóng</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Ngày bắt đầu</label>
+                      <input 
+                        type="date" 
+                        className="input-field" 
+                        defaultValue={selectedItem.startDate ? selectedItem.startDate.split('T')[0] : ''}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Ngày kết thúc</label>
+                      <input 
+                        type="date" 
+                        className="input-field" 
+                        defaultValue={selectedItem.endDate ? selectedItem.endDate.split('T')[0] : ''}
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Năm học</label>
+                      <input 
+                        type="text" 
+                        className="input-field" 
+                        defaultValue={selectedItem.academicYear}
+                        placeholder="Nhập năm học" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Trạng thái</label>
+                      <select className="input-field" defaultValue={selectedItem.status}>
+                        <option value="active">Đang hoạt động</option>
+                        <option value="inactive">Không hoạt động</option>
+                        <option value="upcoming">Sắp tới</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Ngày bắt đầu</label>
+                      <input 
+                        type="date" 
+                        className="input-field" 
+                        defaultValue={selectedItem.startDate ? selectedItem.startDate.split('T')[0] : ''}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Ngày kết thúc</label>
+                      <input 
+                        type="date" 
+                        className="input-field" 
+                        defaultValue={selectedItem.endDate ? selectedItem.endDate.split('T')[0] : ''}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Mô tả</label>
+                    <textarea 
+                      className="input-field" 
+                      rows="3" 
+                      defaultValue={selectedItem.description}
+                      placeholder="Nhập mô tả năm học"
+                    ></textarea>
+                  </div>
+                </>
+              )}
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="btn-secondary"
+                >
+                  Hủy
+                </button>
+                <button type="submit" className="btn-primary">
+                  Cập nhật
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* View Details Modal */}
+      {showViewModal && selectedItem && (
+        <div className={`fixed inset-0 bg-gray-800/10 backdrop-blur-[2px] flex items-center justify-center z-50 transition-opacity duration-300 ${showViewModal ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="relative p-6 border w-full max-w-4xl shadow-lg rounded-md bg-white">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold text-gray-900">
+                Chi tiết {activeTab === 'semesters' ? 'học kỳ' : 'năm học'}
+              </h3>
+              <button
+                onClick={() => setShowViewModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Thông tin chính */}
+              <div className="lg:col-span-2 space-y-6">
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    {activeTab === 'semesters' ? (
+                      <CalendarIcon className="h-5 w-5 mr-2" />
+                    ) : (
+                      <AcademicCapIcon className="h-5 w-5 mr-2" />
+                    )}
+                    Thông tin {activeTab === 'semesters' ? 'học kỳ' : 'năm học'}
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-500">
+                        {activeTab === 'semesters' ? 'Tên học kỳ' : 'Năm học'}
+                      </label>
+                      <p className="mt-1 text-sm text-gray-900">
+                        {activeTab === 'semesters' ? selectedItem.name : selectedItem.academicYear}
+                      </p>
+                    </div>
+                    {activeTab === 'semesters' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500">ID học kỳ</label>
+                        <p className="mt-1 text-sm text-gray-900 font-mono">{selectedItem.id}</p>
+                      </div>
+                    )}
+                    {activeTab === 'semesters' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500">Năm học</label>
+                        <p className="mt-1 text-sm text-gray-900">{selectedItem.academicYearName}</p>
+                      </div>
+                    )}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-500">Trạng thái</label>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(selectedItem.isOpen)}`}>
+                        {getStatusText(selectedItem.isOpen)}
+                      </span>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-500">Ngày bắt đầu</label>
+                      <p className="mt-1 text-sm text-gray-900 flex items-center">
+                        <ClockIcon className="h-4 w-4 mr-1" />
+                        {selectedItem.startDate ? new Date(selectedItem.startDate).toLocaleDateString('vi-VN') : 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-500">Ngày kết thúc</label>
+                      <p className="mt-1 text-sm text-gray-900 flex items-center">
+                        <ClockIcon className="h-4 w-4 mr-1" />
+                        {selectedItem.endDate ? new Date(selectedItem.endDate).toLocaleDateString('vi-VN') : 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {activeTab === 'academic-years' && (
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <h4 className="text-lg font-medium text-gray-900 mb-4">Mô tả</h4>
+                    <p className="text-sm text-gray-900">{selectedItem.description || 'Chưa có mô tả'}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Avatar và thông tin tóm tắt */}
+              <div className="space-y-6">
+                <div className="bg-gray-50 rounded-lg p-6 text-center">
+                  <div className="flex justify-center mb-4">
+                    <div className="h-24 w-24 rounded-full bg-indigo-100 flex items-center justify-center">
+                      {activeTab === 'semesters' ? (
+                        <CalendarIcon className="h-12 w-12 text-indigo-600" />
+                      ) : (
+                        <AcademicCapIcon className="h-12 w-12 text-indigo-600" />
+                      )}
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900">
+                    {activeTab === 'semesters' ? selectedItem.name : selectedItem.academicYear}
+                  </h3>
+                  {activeTab === 'semesters' && (
+                    <p className="text-sm text-gray-500">ID: {selectedItem.id}</p>
+                  )}
+                  <div className="mt-4">
+                    <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${getStatusBadgeColor(selectedItem.isOpen)}`}>
+                      {getStatusText(selectedItem.isOpen)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <h4 className="text-lg font-medium text-gray-900 mb-4">Thống kê</h4>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-500">Trạng thái:</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {getStatusText(selectedItem.isOpen)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-500">Thời gian:</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {selectedItem.startDate && selectedItem.endDate 
+                          ? `${Math.ceil((new Date(selectedItem.endDate) - new Date(selectedItem.startDate)) / (1000 * 60 * 60 * 24))} ngày`
+                          : 'N/A'
+                        }
+                      </span>
+                    </div>
+                    {activeTab === 'semesters' && (
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Năm học:</span>
+                        <span className="text-sm font-medium text-gray-900">{selectedItem.academicYearName}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={() => setShowViewModal(false)}
+                className="btn-secondary"
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowViewModal(false);
+                  handleEditItem(selectedItem);
+                }}
+                className="btn-primary"
+              >
+                Chỉnh sửa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
