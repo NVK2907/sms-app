@@ -2,10 +2,10 @@ import api from './api';
 
 export const subjectService = {
   // Lấy danh sách môn học với phân trang
-  getAllSubjects: async (page = 0, size = 10, sortBy = 'id', sortDir = 'asc') => {
+  getAllSubjects: async (page = 0, size = 10, sortBy = 'id', sortDir = 'asc', keyword = null) => {
     try {
-      const response = await api.get('/subjects', {
-        params: { page, size, sortBy, sortDir }
+      const response = await api.get('/subjects/search', {
+        params: { page, size, sortBy, sortDir, keyword }
       });
       return response.data;
     } catch (error) {
@@ -63,11 +63,11 @@ export const subjectService = {
     }
   },
 
-  // Tìm kiếm môn học theo tên
-  searchSubjects: async (keyword) => {
+  // Tìm kiếm môn học với phân trang
+  searchSubjects: async (keyword, page = 0, size = 10, sortBy = 'id', sortDir = 'asc') => {
     try {
       const response = await api.get('/subjects/search', {
-        params: { keyword }
+        params: { keyword, page, size, sortBy, sortDir }
       });
       return response.data;
     } catch (error) {

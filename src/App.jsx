@@ -25,6 +25,7 @@ import TeacherSubjects from './pages/teacher/TeacherSubjects';
 import TeacherSchedule from './pages/teacher/TeacherSchedule';
 import TeacherAttendance from './pages/teacher/TeacherAttendance';
 import TeacherGrades from './pages/teacher/TeacherGrades';
+import Profile from './pages/Profile';
 
 
 function App() {
@@ -56,10 +57,7 @@ function App() {
           <Route path="/profile" element={
             <ProtectedRoute>
               <Layout>
-                <div className="p-6">
-                  <h1 className="text-2xl font-bold text-gray-900">Hồ sơ cá nhân</h1>
-                  <p className="mt-2 text-gray-600">Quản lý thông tin cá nhân của bạn</p>
-                </div>
+                <Profile />
               </Layout>
             </ProtectedRoute>
           } />

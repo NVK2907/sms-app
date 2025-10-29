@@ -25,6 +25,7 @@ const SubjectClassManagement = () => {
   const [subjects, setSubjects] = useState([]);
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [currentSearchTerm, setCurrentSearchTerm] = useState('');
   const [pagination, setPagination] = useState({
     page: 0,
     size: 10,
@@ -33,10 +34,10 @@ const SubjectClassManagement = () => {
   });
 
   // Load data from API
-  const loadSubjects = async (page = 0, size = 10) => {
+  const loadSubjects = async (page = 0, size = 10, keyword = null) => {
     setLoading(true);
     try {
-      const response = await subjectService.getAllSubjects(page, size);
+      const response = await subjectService.getAllSubjects(page, size, 'id', 'asc', keyword);
       console.log('Subject API Response:', response); // Debug log
       if (response.success) {
         setSubjects(response.data.subjects || []);
@@ -57,10 +58,12 @@ const SubjectClassManagement = () => {
     }
   };
 
-  const loadClasses = async (page = 0, size = 10) => {
+  const loadClasses = async (page = 0, size = 10, keyword = null) => {
     setLoading(true);
     try {
-      const response = await classService.getAllClasses(page, size);
+      const response = keyword 
+        ? await classService.searchClasses(keyword, page, size)
+        : await classService.getAllClasses(page, size);
       console.log('Class API Response:', response); // Debug log
       if (response.success) {
         setClasses(response.data.classes || []);
@@ -89,15 +92,74 @@ const SubjectClassManagement = () => {
     }
   }, [activeTab]);
 
-  const filteredSubjects = subjects.filter(subject =>
-    subject.subjectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    subject.subjectCode?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Search subjects
+  const searchSubjects = async (keyword, page = 0, size = 10) => {
+    setLoading(true);
+    try {
+      const response = await subjectService.searchSubjects(keyword, page, size);
+      if (response.success) {
+        setSubjects(response.data.subjects || []);
+        setPagination({
+          page: response.data.currentPage || 0,
+          size: response.data.pageSize || 10,
+          totalElements: response.data.totalElements || 0,
+          totalPages: response.data.totalPages || 0
+        });
+      }
+    } catch (error) {
+      console.error('Lỗi khi tìm kiếm môn học:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const filteredClasses = classes.filter(cls =>
-    cls.className?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cls.classCode?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Search classes using API
+  const searchClasses = async (keyword, page = 0, size = 10) => {
+    setLoading(true);
+    try {
+      const response = await classService.searchClasses(keyword, page, size);
+      if (response.success) {
+        setClasses(response.data.classes || []);
+        setPagination({
+          page: response.data.currentPage || 0,
+          size: response.data.pageSize || 10,
+          totalElements: response.data.totalElements || 0,
+          totalPages: response.data.totalPages || 0
+        });
+      }
+    } catch (error) {
+      console.error('Lỗi khi tìm kiếm lớp học:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // For classes, use API search results directly
+  const filteredClasses = activeTab === 'classes' ? classes : [];
+
+  // Handle search
+  const handleSearch = () => {
+    if (activeTab === 'subjects') {
+      if (searchTerm.trim()) {
+        setCurrentSearchTerm(searchTerm.trim());
+        searchSubjects(searchTerm.trim(), 0, pagination.size);
+      } else {
+        setCurrentSearchTerm('');
+        loadSubjects();
+      }
+    } else {
+      if (searchTerm.trim()) {
+        setCurrentSearchTerm(searchTerm.trim());
+        searchClasses(searchTerm.trim(), 0, pagination.size);
+      } else {
+        setCurrentSearchTerm('');
+        loadClasses();
+      }
+    }
+  };
+
+  // For subjects, use API search results directly
+  const filteredSubjects = activeTab === 'subjects' ? subjects : [];
 
   const handleViewItem = (item) => {
     setSelectedItem(item);
@@ -165,17 +227,31 @@ const SubjectClassManagement = () => {
               placeholder={`Tìm kiếm ${activeTab === 'subjects' ? 'môn học' : 'lớp học'}...`}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleSearch();
+                }
+              }}
               className="input-field pl-10"
             />
           </div>
         </div>
-        <button
-          onClick={() => activeTab === 'subjects' ? setShowAddSubjectModal(true) : setShowAddClassModal(true)}
-          className="btn-primary flex items-center space-x-2"
-        >
-          <PlusIcon className="h-5 w-5" />
-          <span>Thêm {activeTab === 'subjects' ? 'môn học' : 'lớp học'}</span>
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleSearch}
+            className="btn-secondary flex items-center space-x-2"
+          >
+            <MagnifyingGlassIcon className="h-4 w-4" />
+            <span>Tìm kiếm</span>
+          </button>
+          <button
+            onClick={() => activeTab === 'subjects' ? setShowAddSubjectModal(true) : setShowAddClassModal(true)}
+            className="btn-primary flex items-center space-x-2"
+          >
+            <PlusIcon className="h-5 w-5" />
+            <span>Thêm {activeTab === 'subjects' ? 'môn học' : 'lớp học'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Content */}
@@ -316,24 +392,24 @@ const SubjectClassManagement = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
                           <div className="text-sm font-medium text-gray-900">
-                            {cls.className || 'N/A'}
-                          </div>
-                          <div className="text-sm text-gray-500">
                             {cls.classCode || 'N/A'}
                           </div>
+                          <div className="text-sm text-gray-500">
+                            {cls.subjectName || 'N/A'}
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">
-                          {cls.grade || 'N/A'}
+                          {cls.semesterName || 'N/A'}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {cls.academicYear || 'N/A'}
+                          {cls.teacherName || 'Chưa phân công'}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">
-                          {cls.studentCount || 0}/{cls.maxStudents || 0}
+                          {cls.currentStudentCount || 0}/{cls.maxStudent || 0}
                         </div>
                         <div className="text-sm text-gray-500">
                           sinh viên
@@ -394,7 +470,21 @@ const SubjectClassManagement = () => {
         totalPages={pagination.totalPages}
         totalElements={pagination.totalElements}
         pageSize={pagination.size}
-        onPageChange={(page) => activeTab === 'subjects' ? loadSubjects(page, pagination.size) : loadClasses(page, pagination.size)}
+        onPageChange={(page) => {
+          if (activeTab === 'subjects') {
+            if (currentSearchTerm) {
+              searchSubjects(currentSearchTerm, page, pagination.size);
+            } else {
+              loadSubjects(page, pagination.size);
+            }
+          } else {
+            if (currentSearchTerm) {
+              searchClasses(currentSearchTerm, page, pagination.size);
+            } else {
+              loadClasses(page, pagination.size);
+            }
+          }
+        }}
         itemName={activeTab === 'subjects' ? 'môn học' : 'lớp học'}
       />
 
@@ -474,20 +564,26 @@ const SubjectClassManagement = () => {
             <form className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Tên lớp học</label>
-                  <input type="text" className="input-field" placeholder="Nhập tên lớp học" />
-                </div>
-                <div>
                   <label className="block text-sm font-medium text-gray-700">Mã lớp học</label>
                   <input type="text" className="input-field" placeholder="Nhập mã lớp học" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Khối</label>
-                  <input type="text" className="input-field" placeholder="Nhập khối" />
+                  <label className="block text-sm font-medium text-gray-700">Môn học</label>
+                  <select className="input-field">
+                    <option value="">Chọn môn học</option>
+                  </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Năm học</label>
-                  <input type="text" className="input-field" placeholder="Nhập năm học" />
+                  <label className="block text-sm font-medium text-gray-700">Học kỳ</label>
+                  <select className="input-field">
+                    <option value="">Chọn học kỳ</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Giáo viên</label>
+                  <select className="input-field">
+                    <option value="">Chọn giáo viên</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Số sinh viên tối đa</label>
@@ -588,15 +684,6 @@ const SubjectClassManagement = () => {
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Tên lớp học</label>
-                      <input 
-                        type="text" 
-                        className="input-field" 
-                        defaultValue={selectedItem.className}
-                        placeholder="Nhập tên lớp học" 
-                      />
-                    </div>
-                    <div>
                       <label className="block text-sm font-medium text-gray-700">Mã lớp học</label>
                       <input 
                         type="text" 
@@ -606,29 +693,29 @@ const SubjectClassManagement = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Khối</label>
-                      <input 
-                        type="text" 
-                        className="input-field" 
-                        defaultValue={selectedItem.grade}
-                        placeholder="Nhập khối" 
-                      />
+                      <label className="block text-sm font-medium text-gray-700">Môn học</label>
+                      <select className="input-field" defaultValue={selectedItem.subjectId}>
+                        <option value="">Chọn môn học</option>
+                      </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Năm học</label>
-                      <input 
-                        type="text" 
-                        className="input-field" 
-                        defaultValue={selectedItem.academicYear}
-                        placeholder="Nhập năm học" 
-                      />
+                      <label className="block text-sm font-medium text-gray-700">Học kỳ</label>
+                      <select className="input-field" defaultValue={selectedItem.semesterId}>
+                        <option value="">Chọn học kỳ</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Giáo viên</label>
+                      <select className="input-field" defaultValue={selectedItem.teacherId}>
+                        <option value="">Chọn giáo viên</option>
+                      </select>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Số sinh viên tối đa</label>
                       <input 
                         type="number" 
                         className="input-field" 
-                        defaultValue={selectedItem.maxStudents}
+                        defaultValue={selectedItem.maxStudent}
                         placeholder="Nhập số sinh viên tối đa" 
                       />
                     </div>
@@ -692,18 +779,18 @@ const SubjectClassManagement = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-500">
-                        {activeTab === 'subjects' ? 'Tên môn học' : 'Tên lớp học'}
+                        {activeTab === 'subjects' ? 'Tên môn học' : 'Mã lớp học'}
                       </label>
                       <p className="mt-1 text-sm text-gray-900">
-                        {activeTab === 'subjects' ? selectedItem.subjectName : selectedItem.className}
+                        {activeTab === 'subjects' ? selectedItem.subjectName : selectedItem.classCode}
                       </p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-500">
-                        {activeTab === 'subjects' ? 'Mã môn học' : 'Mã lớp học'}
+                        {activeTab === 'subjects' ? 'Mã môn học' : 'Môn học'}
                       </label>
                       <p className="mt-1 text-sm text-gray-900 font-mono">
-                        {activeTab === 'subjects' ? selectedItem.subjectCode : selectedItem.classCode}
+                        {activeTab === 'subjects' ? selectedItem.subjectCode : selectedItem.subjectName}
                       </p>
                     </div>
                     {activeTab === 'subjects' ? (
@@ -726,17 +813,17 @@ const SubjectClassManagement = () => {
                     ) : (
                       <>
                         <div>
-                          <label className="block text-sm font-medium text-gray-500">Khối</label>
-                          <p className="mt-1 text-sm text-gray-900">{selectedItem.grade || 'N/A'}</p>
+                          <label className="block text-sm font-medium text-gray-500">Học kỳ</label>
+                          <p className="mt-1 text-sm text-gray-900">{selectedItem.semesterName || 'N/A'}</p>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-500">Năm học</label>
-                          <p className="mt-1 text-sm text-gray-900">{selectedItem.academicYear || 'N/A'}</p>
+                          <label className="block text-sm font-medium text-gray-500">Giáo viên</label>
+                          <p className="mt-1 text-sm text-gray-900">{selectedItem.teacherName || 'Chưa phân công'}</p>
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-500">Số sinh viên</label>
                           <p className="mt-1 text-sm text-gray-900">
-                            {selectedItem.studentCount || 0}/{selectedItem.maxStudents || 0} sinh viên
+                            {selectedItem.currentStudentCount || 0}/{selectedItem.maxStudent || 0} sinh viên
                           </p>
                         </div>
                         <div>
@@ -775,10 +862,10 @@ const SubjectClassManagement = () => {
                     </div>
                   </div>
                   <h3 className="text-lg font-medium text-gray-900">
-                    {activeTab === 'subjects' ? selectedItem.subjectName : selectedItem.className}
+                    {activeTab === 'subjects' ? selectedItem.subjectName : selectedItem.classCode}
                   </h3>
                   <p className="text-sm text-gray-500">
-                    {activeTab === 'subjects' ? selectedItem.subjectCode : selectedItem.classCode}
+                    {activeTab === 'subjects' ? selectedItem.subjectCode : selectedItem.subjectName}
                   </p>
                   <div className="mt-4">
                     <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
@@ -812,16 +899,16 @@ const SubjectClassManagement = () => {
                         <div className="flex justify-between">
                           <span className="text-sm text-gray-500">Số sinh viên:</span>
                           <span className="text-sm font-medium text-gray-900">
-                            {selectedItem.studentCount || 0}/{selectedItem.maxStudents || 0}
+                            {selectedItem.currentStudentCount || 0}/{selectedItem.maxStudent || 0}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-sm text-gray-500">Khối:</span>
-                          <span className="text-sm font-medium text-gray-900">{selectedItem.grade || 'N/A'}</span>
+                          <span className="text-sm text-gray-500">Học kỳ:</span>
+                          <span className="text-sm font-medium text-gray-900">{selectedItem.semesterName || 'N/A'}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-sm text-gray-500">Năm học:</span>
-                          <span className="text-sm font-medium text-gray-900">{selectedItem.academicYear || 'N/A'}</span>
+                          <span className="text-sm text-gray-500">Giáo viên:</span>
+                          <span className="text-sm font-medium text-gray-900">{selectedItem.teacherName || 'Chưa phân công'}</span>
                         </div>
                       </>
                     )}

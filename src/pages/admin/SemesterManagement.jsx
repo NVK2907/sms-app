@@ -105,7 +105,7 @@ const SemesterManagement = () => {
   );
 
   const filteredAcademicYears = academicYears.filter(year =>
-    year.academicYear?.toLowerCase().includes(searchTerm.toLowerCase())
+    year.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleViewItem = (item) => {
@@ -333,10 +333,10 @@ const SemesterManagement = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
                           <div className="text-sm font-medium text-gray-900">
-                            {year.academicYear || 'N/A'}
+                            {year.name || 'N/A'}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {year.description || 'N/A'}
+                            ID: {year.id}
                           </div>
                         </div>
                       </td>
@@ -346,8 +346,8 @@ const SemesterManagement = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(year.status)}`}>
-                          {getStatusText(year.status)}
+                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                          {year.semesters?.length || 0} học kỳ
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -430,7 +430,7 @@ const SemesterManagement = () => {
                   <select className="input-field">
                     <option value="">Chọn năm học</option>
                     {academicYears.map(year => (
-                      <option key={year.id} value={year.academicYear}>{year.academicYear}</option>
+                      <option key={year.id} value={year.name}>{year.name}</option>
                     ))}
                   </select>
                 </div>
@@ -572,7 +572,7 @@ const SemesterManagement = () => {
                       <select className="input-field" defaultValue={selectedItem.academicYearName}>
                         <option value="">Chọn năm học</option>
                         {academicYears.map(year => (
-                          <option key={year.id} value={year.academicYear}>{year.academicYear}</option>
+                          <option key={year.id} value={year.name}>{year.name}</option>
                         ))}
                       </select>
                     </div>
@@ -609,17 +609,19 @@ const SemesterManagement = () => {
                       <input 
                         type="text" 
                         className="input-field" 
-                        defaultValue={selectedItem.academicYear}
+                        defaultValue={selectedItem.name}
                         placeholder="Nhập năm học" 
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Trạng thái</label>
-                      <select className="input-field" defaultValue={selectedItem.status}>
-                        <option value="active">Đang hoạt động</option>
-                        <option value="inactive">Không hoạt động</option>
-                        <option value="upcoming">Sắp tới</option>
-                      </select>
+                      <label className="block text-sm font-medium text-gray-700">Số học kỳ</label>
+                      <input 
+                        type="number" 
+                        className="input-field" 
+                        defaultValue={selectedItem.semesters?.length || 0}
+                        placeholder="Số học kỳ" 
+                        disabled
+                      />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Ngày bắt đầu</label>
@@ -643,7 +645,7 @@ const SemesterManagement = () => {
                     <textarea 
                       className="input-field" 
                       rows="3" 
-                      defaultValue={selectedItem.description}
+                      defaultValue={selectedItem.description || ''}
                       placeholder="Nhập mô tả năm học"
                     ></textarea>
                   </div>
@@ -702,7 +704,7 @@ const SemesterManagement = () => {
                         {activeTab === 'semesters' ? 'Tên học kỳ' : 'Năm học'}
                       </label>
                       <p className="mt-1 text-sm text-gray-900">
-                        {activeTab === 'semesters' ? selectedItem.name : selectedItem.academicYear}
+                        {activeTab === 'semesters' ? selectedItem.name : selectedItem.name}
                       </p>
                     </div>
                     {activeTab === 'semesters' && (
@@ -718,9 +720,9 @@ const SemesterManagement = () => {
                       </div>
                     )}
                     <div>
-                      <label className="block text-sm font-medium text-gray-500">Trạng thái</label>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(selectedItem.isOpen)}`}>
-                        {getStatusText(selectedItem.isOpen)}
+                      <label className="block text-sm font-medium text-gray-500">Số học kỳ</label>
+                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                        {selectedItem.semesters?.length || 0} học kỳ
                       </span>
                     </div>
                     <div>
@@ -740,10 +742,24 @@ const SemesterManagement = () => {
                   </div>
                 </div>
 
-                {activeTab === 'academic-years' && (
+                {activeTab === 'academic-years' && selectedItem.semesters && selectedItem.semesters.length > 0 && (
                   <div className="bg-gray-50 rounded-lg p-6">
-                    <h4 className="text-lg font-medium text-gray-900 mb-4">Mô tả</h4>
-                    <p className="text-sm text-gray-900">{selectedItem.description || 'Chưa có mô tả'}</p>
+                    <h4 className="text-lg font-medium text-gray-900 mb-4">Danh sách học kỳ</h4>
+                    <div className="space-y-3">
+                      {selectedItem.semesters.map((semester, index) => (
+                        <div key={semester.id || index} className="flex items-center justify-between p-3 bg-white rounded-lg border">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{semester.name}</div>
+                            <div className="text-sm text-gray-500">
+                              {semester.startDate ? new Date(semester.startDate).toLocaleDateString('vi-VN') : 'N/A'} - {semester.endDate ? new Date(semester.endDate).toLocaleDateString('vi-VN') : 'N/A'}
+                            </div>
+                          </div>
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(semester.isOpen)}`}>
+                            {getStatusText(semester.isOpen)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -761,14 +777,14 @@ const SemesterManagement = () => {
                     </div>
                   </div>
                   <h3 className="text-lg font-medium text-gray-900">
-                    {activeTab === 'semesters' ? selectedItem.name : selectedItem.academicYear}
+                    {activeTab === 'semesters' ? selectedItem.name : selectedItem.name}
                   </h3>
                   {activeTab === 'semesters' && (
                     <p className="text-sm text-gray-500">ID: {selectedItem.id}</p>
                   )}
                   <div className="mt-4">
-                    <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${getStatusBadgeColor(selectedItem.isOpen)}`}>
-                      {getStatusText(selectedItem.isOpen)}
+                    <span className="inline-flex px-3 py-1 text-sm font-semibold rounded-full bg-blue-100 text-blue-800">
+                      {selectedItem.semesters?.length || 0} học kỳ
                     </span>
                   </div>
                 </div>
@@ -777,9 +793,9 @@ const SemesterManagement = () => {
                   <h4 className="text-lg font-medium text-gray-900 mb-4">Thống kê</h4>
                   <div className="space-y-3">
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-500">Trạng thái:</span>
+                      <span className="text-sm text-gray-500">Số học kỳ:</span>
                       <span className="text-sm font-medium text-gray-900">
-                        {getStatusText(selectedItem.isOpen)}
+                        {selectedItem.semesters?.length || 0}
                       </span>
                     </div>
                     <div className="flex justify-between">

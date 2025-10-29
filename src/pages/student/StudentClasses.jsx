@@ -165,7 +165,7 @@ const StudentClasses = () => {
                   <div className="flex items-center">
                     <AcademicCapIcon className="h-8 w-8 text-indigo-600" />
                     <div className="ml-3">
-                      <h3 className="text-lg font-medium text-gray-900">{cls.className}</h3>
+                      <h3 className="text-lg font-medium text-gray-900">{cls.classCode}</h3>
                       <p className="text-sm text-gray-500">{cls.subjectName}</p>
                     </div>
                   </div>
@@ -225,7 +225,7 @@ const StudentClasses = () => {
                   <div className="flex items-center">
                     <AcademicCapIcon className="h-8 w-8 text-blue-600" />
                     <div className="ml-3">
-                      <h3 className="text-lg font-medium text-gray-900">{cls.className}</h3>
+                      <h3 className="text-lg font-medium text-gray-900">{cls.classCode}</h3>
                       <p className="text-sm text-gray-500">{cls.subjectName}</p>
                     </div>
                   </div>
@@ -253,7 +253,7 @@ const StudentClasses = () => {
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
                     <UserGroupIcon className="h-4 w-4 mr-2" />
-                    <span>Số chỗ: {cls.currentStudents}/{cls.maxStudents}</span>
+                    <span>Số chỗ: {cls.currentStudentCount || 0}/{cls.maxStudent || 0}</span>
                   </div>
                 </div>
 

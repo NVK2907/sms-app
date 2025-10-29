@@ -81,15 +81,11 @@ const StudentManagement = () => {
     loadStudents();
   }, []);
 
-  // Filter students based on search term, class, and course
+  // Filter students based on class and course only (search is handled by API)
   const filteredStudents = students.filter(student => {
-    const matchesSearch = !searchTerm || 
-                         student.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         student.studentCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         student.email?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesClass = selectedClass === 'all' || student.className === selectedClass;
     const matchesCourse = selectedCourse === 'all' || student.courseYear === selectedCourse;
-    return matchesSearch && matchesClass && matchesCourse;
+    return matchesClass && matchesCourse;
   });
 
   const getStatusBadgeColor = (isActive) => {
@@ -222,7 +218,7 @@ const StudentManagement = () => {
 
       {/* Filters */}
       <div className="card">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div className="md:col-span-2">
             <div className="relative">
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -231,6 +227,11 @@ const StudentManagement = () => {
                 placeholder="Tìm kiếm theo tên, mã SV hoặc email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSearch();
+                  }
+                }}
                 className="input-field pl-10"
               />
             </div>
@@ -258,6 +259,15 @@ const StudentManagement = () => {
                 <option key={course} value={course}>Khóa {course}</option>
               ))}
             </select>
+          </div>
+          <div>
+            <button
+              onClick={handleSearch}
+              className="btn-primary flex items-center space-x-2 w-full"
+            >
+              <MagnifyingGlassIcon className="h-4 w-4" />
+              <span>Tìm kiếm</span>
+            </button>
           </div>
         </div>
       </div>

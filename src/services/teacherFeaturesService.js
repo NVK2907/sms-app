@@ -309,5 +309,27 @@ export const teacherFeaturesService = {
     } catch (error) {
       throw error.response?.data || error;
     }
+  },
+
+  // === SCHEDULE MANAGEMENT ===
+
+  // Lấy lịch dạy của giáo viên (tuần)
+  getTeacherSchedule: async (teacherId) => {
+    try {
+      const response = await api.get(`/teacher/schedule/${teacherId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Lấy lịch dạy theo ngày
+  getTeacherDailySchedule: async (teacherId, date) => {
+    try {
+      const response = await api.get(`/teacher/schedule/${teacherId}/daily/${date}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
   }
 };

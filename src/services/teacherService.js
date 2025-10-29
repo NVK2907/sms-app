@@ -13,6 +13,18 @@ export const teacherService = {
     }
   },
 
+  // Tìm kiếm giáo viên
+  searchTeachers: async (keyword, page = 0, size = 10, sortBy = 'id', sortDir = 'asc') => {
+    try {
+      const response = await api.get('/teachers/search', {
+        params: { keyword, page, size, sortBy, sortDir }
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
   // Lấy thông tin giáo viên theo ID
   getTeacherById: async (teacherId) => {
     try {

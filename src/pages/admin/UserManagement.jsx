@@ -79,15 +79,11 @@ const UserManagement = () => {
     loadUsers();
   }, []);
 
-  // Filter users based on search term and role
+  // Filter users based on role only (search is handled by API)
   const filteredUsers = users.filter(user => {
-    const matchesSearch = !searchTerm || 
-                         user.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.username?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = selectedRole === 'all' || 
                        user.roles?.some(role => role.roleName?.toLowerCase() === selectedRole);
-    return matchesSearch && matchesRole;
+    return matchesRole;
   });
 
   // Debug log to check users data
@@ -192,11 +188,6 @@ const UserManagement = () => {
           <p className="mt-1 text-sm text-gray-500">
             Quản lý tài khoản học sinh, giáo viên và quản trị viên
           </p>
-          {users.length > 0 && (
-            <p className="mt-1 text-xs text-blue-600">
-              Tổng: {users.length} người dùng | Hiển thị: {filteredUsers.length} người dùng
-            </p>
-          )}
         </div>
         <button
           onClick={() => setShowAddModal(true)}
@@ -218,6 +209,11 @@ const UserManagement = () => {
                 placeholder="Tìm kiếm theo tên, email hoặc username..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSearch();
+                  }
+                }}
                 className="input-field pl-10"
               />
             </div>
@@ -233,6 +229,15 @@ const UserManagement = () => {
               <option value="teacher">Giáo viên</option>
               <option value="student">Học sinh</option>
             </select>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleSearch}
+              className="btn-primary flex items-center space-x-2"
+            >
+              <MagnifyingGlassIcon className="h-4 w-4" />
+              <span>Tìm kiếm</span>
+            </button>
           </div>
         </div>
       </div>

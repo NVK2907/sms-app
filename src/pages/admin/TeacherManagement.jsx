@@ -58,15 +58,41 @@ const TeacherManagement = () => {
     loadTeachers();
   }, []);
 
-  // Filter teachers based on search term and subject
+  // Search teachers
+  const searchTeachers = async (keyword, page = 0, size = 10) => {
+    setLoading(true);
+    try {
+      const response = await teacherService.searchTeachers(keyword, page, size);
+      if (response.success) {
+        setTeachers(response.data.teachers || []);
+        setPagination({
+          page: response.data.currentPage || 0,
+          size: response.data.pageSize || 10,
+          totalElements: response.data.totalElements || 0,
+          totalPages: response.data.totalPages || 0
+        });
+      }
+    } catch (error) {
+      console.error('Lỗi khi tìm kiếm giáo viên:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle search
+  const handleSearch = () => {
+    if (searchTerm.trim()) {
+      searchTeachers(searchTerm.trim(), pagination.page, pagination.size);
+    } else {
+      loadTeachers(pagination.page, pagination.size);
+    }
+  };
+
+  // Filter teachers based on subject only (search is handled by API)
   const filteredTeachers = teachers.filter(teacher => {
-    const matchesSearch = !searchTerm || 
-                         teacher.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         teacher.teacherCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         teacher.email?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesSubject = selectedSubject === 'all' || 
                           teacher.subjects?.some(subject => subject.subjectName === selectedSubject);
-    return matchesSearch && matchesSubject;
+    return matchesSubject;
   });
 
   const getStatusBadgeColor = (status) => {
@@ -125,6 +151,11 @@ const TeacherManagement = () => {
                 placeholder="Tìm kiếm theo tên, mã GV hoặc email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSearch();
+                  }
+                }}
                 className="input-field pl-10"
               />
             </div>
@@ -140,6 +171,15 @@ const TeacherManagement = () => {
                 <option key={subject} value={subject}>{subject}</option>
               ))}
             </select>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleSearch}
+              className="btn-primary flex items-center space-x-2"
+            >
+              <MagnifyingGlassIcon className="h-4 w-4" />
+              <span>Tìm kiếm</span>
+            </button>
           </div>
         </div>
       </div>

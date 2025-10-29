@@ -4,8 +4,20 @@ export const classService = {
   // Lấy danh sách lớp học với phân trang
   getAllClasses: async (page = 0, size = 10, sortBy = 'id', sortDir = 'asc') => {
     try {
-      const response = await api.get('/classes', {
+      const response = await api.get('/classes/search', {
         params: { page, size, sortBy, sortDir }
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Tìm kiếm lớp học với phân trang
+  searchClasses: async (keyword, page = 0, size = 10, sortBy = 'id', sortDir = 'asc') => {
+    try {
+      const response = await api.get('/classes/search', {
+        params: { keyword, page, size, sortBy, sortDir }
       });
       return response.data;
     } catch (error) {
