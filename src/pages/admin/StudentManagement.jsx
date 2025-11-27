@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   PlusIcon,
   MagnifyingGlassIcon,
@@ -29,6 +29,48 @@ const StudentManagement = () => {
     totalElements: 0,
     totalPages: 0
   });
+  const [notification, setNotification] = useState(null);
+  const notificationTimeoutRef = useRef(null);
+  const [editStudentForm, setEditStudentForm] = useState({
+    fullName: '',
+    studentCode: '',
+    email: '',
+    phone: '',
+    dob: '',
+    gender: 'male',
+    className: '',
+    courseYear: '',
+    address: '',
+    isActive: true
+  });
+  const [editStudentErrors, setEditStudentErrors] = useState({});
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [editSubmitError, setEditSubmitError] = useState(null);
+  const showNotification = (type, message) => {
+    if (notificationTimeoutRef.current) {
+      clearTimeout(notificationTimeoutRef.current);
+    }
+    setNotification({ type, message });
+    notificationTimeoutRef.current = setTimeout(() => setNotification(null), 4000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (notificationTimeoutRef.current) {
+        clearTimeout(notificationTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const formatDateForInput = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+    return date.toISOString().split('T')[0];
+  };
+
 
   // Load students data
   const loadStudents = async (page = 0, size = 10) => {
@@ -120,6 +162,20 @@ const StudentManagement = () => {
     setShowAddModal(false);
     setShowViewModal(false);
     setSelectedStudent(student);
+    setEditStudentForm({
+      fullName: student.fullName || '',
+      studentCode: student.studentCode || '',
+      email: student.email || '',
+      phone: student.phone || '',
+      dob: formatDateForInput(student.dob || student.dateOfBirth),
+      gender: student.gender?.toLowerCase() === 'female' ? 'female' : 'male',
+      className: student.className || '',
+      courseYear: student.courseYear ? String(student.courseYear) : '',
+      address: student.address || '',
+      isActive: student.isActive ?? true
+    });
+    setEditStudentErrors({});
+    setEditSubmitError(null);
     setShowEditModal(true);
   };
 
@@ -127,9 +183,16 @@ const StudentManagement = () => {
     if (window.confirm(`Bạn có chắc chắn muốn xóa sinh viên ${student.fullName}?`)) {
       try {
         await studentService.deleteStudent(student.id);
+        showNotification('success', 'Xóa sinh viên thành công.');
         loadStudents(pagination.page, pagination.size);
       } catch (error) {
         console.error('Lỗi khi xóa sinh viên:', error);
+        const message = error?.message || error?.error || error?.details || error?.response?.message;
+        const fallback = 'Không thể xóa sinh viên. Vui lòng thử lại.';
+        showNotification(
+          'error',
+          typeof message === 'string' && message.trim().length > 0 ? message : fallback
+        );
       }
     }
   };
@@ -146,11 +209,23 @@ const StudentManagement = () => {
 
   const handleUpdateStudent = async (studentId, studentData) => {
     try {
+      setIsUpdating(true);
+      setEditSubmitError(null);
       await studentService.updateStudent(studentId, studentData);
+      showNotification('success', 'Cập nhật sinh viên thành công.');
       setShowEditModal(false);
-      loadStudents();
+      setSelectedStudent(null);
+      loadStudents(pagination.page, pagination.size);
     } catch (error) {
       console.error('Lỗi khi cập nhật sinh viên:', error);
+      const message = error?.message || error?.error || error?.details || error?.response?.message;
+      const fallback = 'Không thể cập nhật sinh viên. Vui lòng thử lại.';
+      const resolvedMessage =
+        typeof message === 'string' && message.trim().length > 0 ? message : fallback;
+      setEditSubmitError(resolvedMessage);
+      showNotification('error', resolvedMessage);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -174,6 +249,57 @@ const StudentManagement = () => {
     setShowEditModal(false);
     setShowViewModal(false);
     setSelectedStudent(null);
+    setEditStudentErrors({});
+    setEditSubmitError(null);
+  };
+
+  const handleEditStudentInputChange = (field, value) => {
+    setEditStudentForm((prev) => ({
+      ...prev,
+      [field]: value
+    }));
+    setEditStudentErrors((prev) => ({
+      ...prev,
+      [field]: undefined
+    }));
+  };
+
+  const validateEditStudentForm = () => {
+    const errors = {};
+    if (!editStudentForm.className.trim()) {
+      errors.className = 'Vui lòng chọn lớp.';
+    }
+    if (!editStudentForm.courseYear.trim()) {
+      errors.courseYear = 'Vui lòng chọn khóa học.';
+    }
+    return errors;
+  };
+
+  const handleEditStudentSubmit = async (event) => {
+    event.preventDefault();
+    if (!selectedStudent) {
+      return;
+    }
+    const errors = validateEditStudentForm();
+    if (Object.keys(errors).length > 0) {
+      setEditStudentErrors(errors);
+      return;
+    }
+
+    const payload = {
+      fullName: editStudentForm.fullName.trim(),
+      studentCode: editStudentForm.studentCode.trim(),
+      email: editStudentForm.email.trim(),
+      phone: editStudentForm.phone.trim() || null,
+      dob: editStudentForm.dob || null,
+      gender: editStudentForm.gender,
+      className: editStudentForm.className.trim(),
+      courseYear: editStudentForm.courseYear.trim(),
+      address: editStudentForm.address.trim() || null,
+      isActive: editStudentForm.isActive
+    };
+
+    await handleUpdateStudent(selectedStudent.id, payload);
   };
 
   const handleAddStudent = () => {
@@ -190,6 +316,19 @@ const StudentManagement = () => {
 
   return (
     <div className="space-y-6">
+      {/* Notification */}
+      {notification && (
+        <div
+          className={`rounded-md p-4 ${
+            notification.type === 'success'
+              ? 'bg-green-50 text-green-800 border border-green-200'
+              : 'bg-red-50 text-red-800 border border-red-200'
+          }`}
+        >
+          {notification.message}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -500,94 +639,140 @@ const StudentManagement = () => {
           >
             <div className="mt-3">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Chỉnh sửa thông tin sinh viên</h3>
-              <form className="space-y-4">
+              <form className="space-y-4" onSubmit={handleEditStudentSubmit}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Họ và tên</label>
                     <input 
                       type="text" 
-                      className="input-field" 
-                      defaultValue={selectedStudent.fullName}
-                      placeholder="Nhập họ và tên" 
+                      className="input-field input-field-disabled" 
+                      value={editStudentForm.fullName}
+                      onChange={(e) => handleEditStudentInputChange('fullName', e.target.value)}
+                      placeholder="Nhập họ và tên"
+                      disabled
+                      readOnly
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Mã sinh viên</label>
                     <input 
                       type="text" 
-                      className="input-field" 
-                      defaultValue={selectedStudent.studentCode}
-                      placeholder="Nhập mã sinh viên" 
+                      className="input-field input-field-disabled" 
+                      value={editStudentForm.studentCode}
+                      onChange={(e) => handleEditStudentInputChange('studentCode', e.target.value)}
+                      placeholder="Nhập mã sinh viên"
+                      disabled
+                      readOnly
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Email</label>
                     <input 
                       type="email" 
-                      className="input-field" 
-                      defaultValue={selectedStudent.email}
-                      placeholder="Nhập email" 
+                      className="input-field input-field-disabled" 
+                      value={editStudentForm.email}
+                      onChange={(e) => handleEditStudentInputChange('email', e.target.value)}
+                      placeholder="Nhập email"
+                      disabled
+                      readOnly
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Số điện thoại</label>
                     <input 
                       type="tel" 
-                      className="input-field" 
-                      defaultValue={selectedStudent.phone}
-                      placeholder="Nhập số điện thoại" 
+                      className="input-field input-field-disabled" 
+                      value={editStudentForm.phone}
+                      onChange={(e) => handleEditStudentInputChange('phone', e.target.value)}
+                      placeholder="Nhập số điện thoại"
+                      disabled
+                      readOnly
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Ngày sinh</label>
                     <input 
                       type="date" 
-                      className="input-field" 
-                      defaultValue={selectedStudent.dateOfBirth}
+                      className="input-field input-field-disabled" 
+                      value={editStudentForm.dob}
+                      onChange={(e) => handleEditStudentInputChange('dob', e.target.value)}
+                      disabled
+                      readOnly
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Giới tính</label>
-                    <select className="input-field" defaultValue={selectedStudent.gender}>
+                    <select
+                      className="input-field input-field-disabled"
+                      value={editStudentForm.gender}
+                      onChange={(e) => handleEditStudentInputChange('gender', e.target.value)}
+                      disabled
+                    >
                       <option value="male">Nam</option>
                       <option value="female">Nữ</option>
+                      <option value="other">Khác</option>
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Lớp</label>
-                    <select className="input-field" defaultValue={selectedStudent.className}>
+                    <select
+                      className="input-field input-field-editable"
+                      value={editStudentForm.className}
+                      onChange={(e) => handleEditStudentInputChange('className', e.target.value)}
+                    >
                       <option value="">Chọn lớp</option>
                       {Array.from(new Set(students.map(s => s.className).filter(Boolean))).map(cls => (
                         <option key={cls} value={cls}>{cls}</option>
                       ))}
                     </select>
+                    {editStudentErrors.className && (
+                      <p className="mt-1 text-sm text-red-600">{editStudentErrors.className}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Khóa học</label>
-                    <select className="input-field" defaultValue={selectedStudent.courseYear}>
+                    <select
+                      className="input-field input-field-editable"
+                      value={editStudentForm.courseYear}
+                      onChange={(e) => handleEditStudentInputChange('courseYear', e.target.value)}
+                    >
                       <option value="">Chọn khóa</option>
                       {Array.from(new Set(students.map(s => s.courseYear).filter(Boolean))).map(course => (
-                        <option key={course} value={course}>Khóa {course}</option>
+                        <option key={course} value={course}>{`Khóa ${course}`}</option>
                       ))}
                     </select>
+                    {editStudentErrors.courseYear && (
+                      <p className="mt-1 text-sm text-red-600">{editStudentErrors.courseYear}</p>
+                    )}
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Địa chỉ</label>
                   <textarea 
-                    className="input-field" 
+                    className="input-field input-field-editable" 
                     rows="3" 
-                    defaultValue={selectedStudent.address}
+                    value={editStudentForm.address}
+                    onChange={(e) => handleEditStudentInputChange('address', e.target.value)}
                     placeholder="Nhập địa chỉ"
                   ></textarea>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Trạng thái</label>
-                  <select className="input-field" defaultValue={selectedStudent.status}>
+                  <select
+                    className="input-field input-field-disabled"
+                    value={editStudentForm.isActive ? 'active' : 'inactive'}
+                    onChange={(e) => handleEditStudentInputChange('isActive', e.target.value === 'active')}
+                    disabled
+                  >
                     <option value="active">Đang học</option>
                     <option value="inactive">Nghỉ học</option>
                   </select>
                 </div>
+                {editSubmitError && (
+                  <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">
+                    {editSubmitError}
+                  </div>
+                )}
                 <div className="flex justify-end space-x-3 pt-4">
                   <button
                     type="button"
@@ -596,8 +781,8 @@ const StudentManagement = () => {
                   >
                     Hủy
                   </button>
-                  <button type="submit" className="btn-primary">
-                    Cập nhật
+                  <button type="submit" className="btn-primary" disabled={isUpdating}>
+                    {isUpdating ? 'Đang cập nhật...' : 'Cập nhật'}
                   </button>
                 </div>
               </form>

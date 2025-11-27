@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
-  PlusIcon,
   MagnifyingGlassIcon,
   PencilIcon,
   TrashIcon,
@@ -18,7 +17,6 @@ const UserManagement = () => {
   const [showViewModal, setShowViewModal] = useState(false);
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [newPassword, setNewPassword] = useState('');
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
@@ -27,6 +25,55 @@ const UserManagement = () => {
     totalElements: 0,
     totalPages: 0
   });
+  const [newUserForm, setNewUserForm] = useState({
+    fullName: '',
+    username: '',
+    email: '',
+    phone: '',
+    password: '',
+    confirmPassword: '',
+    roleKey: 'student'
+  });
+  const [newUserErrors, setNewUserErrors] = useState({});
+  const [submitError, setSubmitError] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editUserForm, setEditUserForm] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    roleKey: 'student',
+    isActive: true
+  });
+  const [editUserErrors, setEditUserErrors] = useState({});
+  const [editSubmitError, setEditSubmitError] = useState(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [resetPasswordForm, setResetPasswordForm] = useState({
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [resetPasswordErrors, setResetPasswordErrors] = useState({});
+  const [resetSubmitError, setResetSubmitError] = useState(null);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [notification, setNotification] = useState(null);
+  const notificationTimeoutRef = useRef(null);
+
+  const showNotification = (type, message) => {
+    if (notificationTimeoutRef.current) {
+      clearTimeout(notificationTimeoutRef.current);
+    }
+    setNotification({ type, message });
+    notificationTimeoutRef.current = setTimeout(() => {
+      setNotification(null);
+    }, 4000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (notificationTimeoutRef.current) {
+        clearTimeout(notificationTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Load users data
   const loadUsers = async (page = 0, size = 10) => {
@@ -79,6 +126,32 @@ const UserManagement = () => {
     loadUsers();
   }, []);
 
+  const roleOptions = useMemo(() => {
+    const baseOptions = {
+      admin: { key: 'admin', label: 'Quản trị viên', id: null },
+      teacher: { key: 'teacher', label: 'Giáo viên', id: null },
+      student: { key: 'student', label: 'Học sinh', id: null }
+    };
+
+    users.forEach(user => {
+      user.roles?.forEach(role => {
+        if (!role?.roleName) {
+          return;
+        }
+        const normalizedRole = role.roleName.toLowerCase();
+        if (baseOptions[normalizedRole] && role.id) {
+          baseOptions[normalizedRole] = {
+            ...baseOptions[normalizedRole],
+            id: role.id,
+            roleName: role.roleName
+          };
+        }
+      });
+    });
+
+    return baseOptions;
+  }, [users]);
+
   // Filter users based on role only (search is handled by API)
   const filteredUsers = users.filter(user => {
     const matchesRole = selectedRole === 'all' || 
@@ -112,21 +185,43 @@ const UserManagement = () => {
 
   const handleEditUser = (user) => {
     setSelectedUser(user);
+    setEditUserForm({
+      fullName: user.fullName || '',
+      email: user.email || '',
+      phone: user.phone || '',
+      roleKey:
+        user.roles?.find((role) => ['admin', 'teacher', 'student'].includes(role.roleName?.toLowerCase()))
+          ?.roleName?.toLowerCase() || 'student',
+      isActive: user.isActive ?? true
+    });
+    setEditUserErrors({});
+    setEditSubmitError(null);
     setShowEditModal(true);
   };
 
   const handleResetPassword = (user) => {
     setSelectedUser(user);
-    setNewPassword('');
+    setResetPasswordForm({ newPassword: '', confirmPassword: '' });
+    setResetPasswordErrors({});
+    setResetSubmitError(null);
     setShowResetPasswordModal(true);
   };
 
   const handleToggleUserStatus = async (user) => {
     try {
       await userService.changeUserStatus(user.id, { isActive: !user.isActive });
+      showNotification(
+        'success',
+        user.isActive ? 'Đã khóa tài khoản người dùng.' : 'Đã mở khóa tài khoản người dùng.'
+      );
       loadUsers(pagination.page, pagination.size);
     } catch (error) {
       console.error('Lỗi khi thay đổi trạng thái người dùng:', error);
+      const message = error?.message || error?.error || error?.details || error?.response?.message;
+      const fallback = 'Không thể thay đổi trạng thái người dùng. Vui lòng thử lại.';
+      const resolvedMessage =
+        typeof message === 'string' && message.trim().length > 0 ? message : fallback;
+      showNotification('error', resolvedMessage);
     }
   };
 
@@ -134,9 +229,15 @@ const UserManagement = () => {
     if (window.confirm(`Bạn có chắc chắn muốn xóa người dùng ${user.fullName}?`)) {
       try {
         await userService.deleteUser(user.id);
+        showNotification('success', 'Xóa người dùng thành công.');
         loadUsers(pagination.page, pagination.size);
       } catch (error) {
         console.error('Lỗi khi xóa người dùng:', error);
+        const message = error?.message || error?.error || error?.details || error?.response?.message;
+        const fallback = 'Không thể xóa người dùng. Vui lòng thử lại.';
+        const resolvedMessage =
+          typeof message === 'string' && message.trim().length > 0 ? message : fallback;
+        showNotification('error', resolvedMessage);
       }
     }
   };
@@ -149,38 +250,281 @@ const UserManagement = () => {
     }
   };
 
+  const resetNewUserForm = () => {
+    setNewUserForm({
+      fullName: '',
+      username: '',
+      email: '',
+      phone: '',
+      password: '',
+      confirmPassword: '',
+      roleKey: 'student'
+    });
+    setNewUserErrors({});
+    setSubmitError(null);
+  };
+
+  const handleOpenAddModal = () => {
+    resetNewUserForm();
+    setShowAddModal(true);
+  };
+
+  const handleCloseAddModal = () => {
+    setShowAddModal(false);
+    resetNewUserForm();
+  };
+
   const handleCreateUser = async (userData) => {
     try {
+      setIsSubmitting(true);
+      setSubmitError(null);
       await userService.createUser(userData);
+      showNotification('success', 'Tạo người dùng thành công.');
       setShowAddModal(false);
+      resetNewUserForm();
       loadUsers();
     } catch (error) {
       console.error('Lỗi khi tạo người dùng:', error);
+      const message = error?.message || error?.error || error?.details || error?.response?.message;
+      setSubmitError(
+        typeof message === 'string' && message.trim().length > 0
+          ? message
+          : 'Không thể tạo người dùng. Vui lòng thử lại.'
+      );
+      showNotification(
+        'error',
+        typeof message === 'string' && message.trim().length > 0
+          ? message
+          : 'Không thể tạo người dùng. Vui lòng thử lại.'
+      );
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const handleNewUserInputChange = (field, value) => {
+    setNewUserForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    setNewUserErrors(prev => ({
+      ...prev,
+      [field]: undefined
+    }));
+  };
+
+  const validateNewUserForm = () => {
+    const errors = {};
+    if (!newUserForm.fullName.trim()) {
+      errors.fullName = 'Vui lòng nhập họ và tên.';
+    }
+    if (!newUserForm.username.trim()) {
+      errors.username = 'Vui lòng nhập username.';
+    }
+    if (!newUserForm.password) {
+      errors.password = 'Vui lòng nhập mật khẩu.';
+    }
+    if (!newUserForm.confirmPassword) {
+      errors.confirmPassword = 'Vui lòng xác nhận mật khẩu.';
+    }
+    if (
+      newUserForm.password &&
+      newUserForm.confirmPassword &&
+      newUserForm.password !== newUserForm.confirmPassword
+    ) {
+      errors.confirmPassword = 'Mật khẩu xác nhận không khớp.';
+    }
+    return errors;
+  };
+
+  const handleAddUserSubmit = async (event) => {
+    event.preventDefault();
+    setSubmitError(null);
+    const errors = validateNewUserForm();
+    if (Object.keys(errors).length > 0) {
+      setNewUserErrors(errors);
+      return;
+    }
+
+    const selectedRole = roleOptions[newUserForm.roleKey];
+    const roleIds = selectedRole?.id ? [selectedRole.id] : [];
+
+    const payload = {
+      username: newUserForm.username.trim(),
+      password: newUserForm.password,
+      email: newUserForm.email.trim() || null,
+      fullName: newUserForm.fullName.trim(),
+      phone: newUserForm.phone.trim() || null,
+      roleIds
+    };
+
+    await handleCreateUser(payload);
   };
 
   const handleUpdateUser = async (userId, userData) => {
     try {
+      setIsUpdating(true);
+      setEditSubmitError(null);
       await userService.updateUser(userId, userData);
+      showNotification('success', 'Cập nhật người dùng thành công.');
       setShowEditModal(false);
-      loadUsers();
+      setSelectedUser(null);
+      loadUsers(pagination.page, pagination.size);
     } catch (error) {
       console.error('Lỗi khi cập nhật người dùng:', error);
+      const message = error?.message || error?.error || error?.details || error?.response?.message;
+      const fallback = 'Không thể cập nhật người dùng. Vui lòng thử lại.';
+      const resolvedMessage =
+        typeof message === 'string' && message.trim().length > 0 ? message : fallback;
+      setEditSubmitError(resolvedMessage);
+      showNotification('error', resolvedMessage);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+  const handleEditUserInputChange = (field, value) => {
+    setEditUserForm((prev) => ({
+      ...prev,
+      [field]: value
+    }));
+    setEditUserErrors((prev) => ({
+      ...prev,
+      [field]: undefined
+    }));
+  };
+
+  const validateEditUserForm = () => {
+    const errors = {};
+    if (!editUserForm.fullName.trim()) {
+      errors.fullName = 'Vui lòng nhập họ và tên.';
+    }
+    if (!editUserForm.email.trim()) {
+      errors.email = 'Vui lòng nhập email.';
+    }
+    return errors;
+  };
+
+  const handleEditUserSubmit = async (event) => {
+    event.preventDefault();
+    if (!selectedUser) {
+      return;
+    }
+    setEditSubmitError(null);
+    const errors = validateEditUserForm();
+    if (Object.keys(errors).length > 0) {
+      setEditUserErrors(errors);
+      return;
+    }
+
+    const selectedRole = roleOptions[editUserForm.roleKey];
+    const roleIds = selectedRole?.id ? [selectedRole.id] : [];
+
+    const payload = {
+      email: editUserForm.email.trim(),
+      fullName: editUserForm.fullName.trim(),
+      phone: editUserForm.phone.trim() || null,
+      isActive: editUserForm.isActive,
+      roleIds
+    };
+
+    await handleUpdateUser(selectedUser.id, payload);
+  };
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    setSelectedUser(null);
+    setEditUserErrors({});
+    setEditSubmitError(null);
+  };
+
+
+  const handleResetPasswordInputChange = (field, value) => {
+    setResetPasswordForm((prev) => ({
+      ...prev,
+      [field]: value
+    }));
+    setResetPasswordErrors((prev) => ({
+      ...prev,
+      [field]: undefined
+    }));
+  };
+
+  const validateResetPasswordForm = () => {
+    const errors = {};
+    if (!resetPasswordForm.newPassword.trim()) {
+      errors.newPassword = 'Vui lòng nhập mật khẩu mới.';
+    }
+    if (!resetPasswordForm.confirmPassword.trim()) {
+      errors.confirmPassword = 'Vui lòng xác nhận mật khẩu.';
+    }
+    if (
+      resetPasswordForm.newPassword.trim() &&
+      resetPasswordForm.confirmPassword.trim() &&
+      resetPasswordForm.newPassword !== resetPasswordForm.confirmPassword
+    ) {
+      errors.confirmPassword = 'Mật khẩu xác nhận không khớp.';
+    }
+    return errors;
+  };
+
+  const handleResetPasswordSubmit = async (event) => {
+    event.preventDefault();
+    if (!selectedUser) {
+      return;
+    }
+
+    setResetSubmitError(null);
+    const errors = validateResetPasswordForm();
+    if (Object.keys(errors).length > 0) {
+      setResetPasswordErrors(errors);
+      return;
+    }
+
+    try {
+      setIsResettingPassword(true);
+      await userService.resetPassword(selectedUser.id, {
+        newPassword: resetPasswordForm.newPassword.trim()
+      });
+      showNotification('success', 'Đặt lại mật khẩu thành công.');
+      setShowResetPasswordModal(false);
+      setSelectedUser(null);
+      setResetPasswordForm({ newPassword: '', confirmPassword: '' });
+    } catch (error) {
+      console.error('Lỗi khi đặt lại mật khẩu:', error);
+      const message = error?.message || error?.error || error?.details || error?.response?.message;
+      const fallback = 'Không thể đặt lại mật khẩu. Vui lòng thử lại.';
+      const resolvedMessage =
+        typeof message === 'string' && message.trim().length > 0 ? message : fallback;
+      setResetSubmitError(resolvedMessage);
+      showNotification('error', resolvedMessage);
+    } finally {
+      setIsResettingPassword(false);
     }
   };
 
-  const handleResetPasswordSubmit = async () => {
-    try {
-      await userService.resetPassword(selectedUser.id, { newPassword });
-      setShowResetPasswordModal(false);
-      setNewPassword('');
-    } catch (error) {
-      console.error('Lỗi khi đặt lại mật khẩu:', error);
-    }
+  const handleCloseResetPasswordModal = () => {
+    setShowResetPasswordModal(false);
+    setSelectedUser(null);
+    setResetPasswordForm({ newPassword: '', confirmPassword: '' });
+    setResetPasswordErrors({});
+    setResetSubmitError(null);
   };
 
   return (
     <div className="space-y-6">
+      {/* Notification */}
+      {notification && (
+        <div
+          className={`rounded-md p-4 mb-4 ${
+            notification.type === 'success'
+              ? 'bg-green-50 text-green-800 border border-green-200'
+              : 'bg-red-50 text-red-800 border border-red-200'
+          }`}
+        >
+          {notification.message}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -190,7 +534,7 @@ const UserManagement = () => {
           </p>
         </div>
         <button
-          onClick={() => setShowAddModal(true)}
+          onClick={handleOpenAddModal}
           className="btn-primary flex items-center space-x-2"
         >
           <UserIcon className="h-5 w-5" />
@@ -399,22 +743,60 @@ const UserManagement = () => {
           <div className="relative p-5 border w-96 shadow-lg rounded-md bg-white">
             <div className="mt-3">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Thêm người dùng mới</h3>
-              <form className="space-y-4">
+              <form className="space-y-4" onSubmit={handleAddUserSubmit}>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Họ và tên</label>
-                  <input type="text" className="input-field" placeholder="Nhập họ và tên" />
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Nhập họ và tên"
+                    value={newUserForm.fullName}
+                    onChange={(e) => handleNewUserInputChange('fullName', e.target.value)}
+                  />
+                  {newUserErrors.fullName && (
+                    <p className="mt-1 text-sm text-red-600">{newUserErrors.fullName}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Username</label>
-                  <input type="text" className="input-field" placeholder="Nhập username" />
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Nhập username"
+                    value={newUserForm.username}
+                    onChange={(e) => handleNewUserInputChange('username', e.target.value)}
+                  />
+                  {newUserErrors.username && (
+                    <p className="mt-1 text-sm text-red-600">{newUserErrors.username}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Email</label>
-                  <input type="email" className="input-field" placeholder="Nhập email" />
+                  <input
+                    type="email"
+                    className="input-field"
+                    placeholder="Nhập email"
+                    value={newUserForm.email}
+                    onChange={(e) => handleNewUserInputChange('email', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Số điện thoại</label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Nhập số điện thoại"
+                    value={newUserForm.phone}
+                    onChange={(e) => handleNewUserInputChange('phone', e.target.value)}
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Vai trò</label>
-                  <select className="input-field">
+                  <select
+                    className="input-field"
+                    value={newUserForm.roleKey}
+                    onChange={(e) => handleNewUserInputChange('roleKey', e.target.value)}
+                  >
                     <option value="student">Học sinh</option>
                     <option value="teacher">Giáo viên</option>
                     <option value="admin">Quản trị viên</option>
@@ -422,18 +804,45 @@ const UserManagement = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Mật khẩu</label>
-                  <input type="password" className="input-field" placeholder="Nhập mật khẩu" />
+                  <input
+                    type="password"
+                    className="input-field"
+                    placeholder="Nhập mật khẩu"
+                    value={newUserForm.password}
+                    onChange={(e) => handleNewUserInputChange('password', e.target.value)}
+                  />
+                  {newUserErrors.password && (
+                    <p className="mt-1 text-sm text-red-600">{newUserErrors.password}</p>
+                  )}
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Xác nhận mật khẩu</label>
+                  <input
+                    type="password"
+                    className="input-field"
+                    placeholder="Nhập lại mật khẩu"
+                    value={newUserForm.confirmPassword}
+                    onChange={(e) => handleNewUserInputChange('confirmPassword', e.target.value)}
+                  />
+                  {newUserErrors.confirmPassword && (
+                    <p className="mt-1 text-sm text-red-600">{newUserErrors.confirmPassword}</p>
+                  )}
+                </div>
+                {submitError && (
+                  <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">
+                    {submitError}
+                  </div>
+                )}
                 <div className="flex justify-end space-x-3 pt-4">
                   <button
                     type="button"
-                    onClick={() => setShowAddModal(false)}
+                    onClick={handleCloseAddModal}
                     className="btn-secondary"
                   >
                     Hủy
                   </button>
-                  <button type="submit" className="btn-primary">
-                    Thêm
+                  <button type="submit" className="btn-primary" disabled={isSubmitting}>
+                    {isSubmitting ? 'Đang thêm...' : 'Thêm'}
                   </button>
                 </div>
               </form>
@@ -448,37 +857,50 @@ const UserManagement = () => {
           <div className="relative p-5 border w-96 shadow-lg rounded-md bg-white">
             <div className="mt-3">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Chỉnh sửa người dùng</h3>
-              <form className="space-y-4">
+              <form className="space-y-4" onSubmit={handleEditUserSubmit}>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Họ và tên</label>
                   <input 
                     type="text" 
                     className="input-field" 
-                    defaultValue={selectedUser.fullName}
+                    value={editUserForm.fullName}
+                    onChange={(e) => handleEditUserInputChange('fullName', e.target.value)}
                     placeholder="Nhập họ và tên" 
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Username</label>
-                  <input 
-                    type="text" 
-                    className="input-field" 
-                    defaultValue={selectedUser.username}
-                    placeholder="Nhập username" 
-                  />
+                  {editUserErrors.fullName && (
+                    <p className="mt-1 text-sm text-red-600">{editUserErrors.fullName}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Email</label>
                   <input 
                     type="email" 
                     className="input-field" 
-                    defaultValue={selectedUser.email}
+                    value={editUserForm.email}
+                    onChange={(e) => handleEditUserInputChange('email', e.target.value)}
                     placeholder="Nhập email" 
+                  />
+                  {editUserErrors.email && (
+                    <p className="mt-1 text-sm text-red-600">{editUserErrors.email}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Số điện thoại</label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    value={editUserForm.phone}
+                    onChange={(e) => handleEditUserInputChange('phone', e.target.value)}
+                    placeholder="Nhập số điện thoại"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Vai trò</label>
-                  <select className="input-field" defaultValue={selectedUser.role}>
+                  <select
+                    className="input-field"
+                    value={editUserForm.roleKey}
+                    onChange={(e) => handleEditUserInputChange('roleKey', e.target.value)}
+                  >
                     <option value="student">Học sinh</option>
                     <option value="teacher">Giáo viên</option>
                     <option value="admin">Quản trị viên</option>
@@ -486,21 +908,30 @@ const UserManagement = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Trạng thái</label>
-                  <select className="input-field" defaultValue={selectedUser.status}>
+                  <select
+                    className="input-field"
+                    value={editUserForm.isActive ? 'active' : 'inactive'}
+                    onChange={(e) => handleEditUserInputChange('isActive', e.target.value === 'active')}
+                  >
                     <option value="active">Hoạt động</option>
                     <option value="inactive">Không hoạt động</option>
                   </select>
                 </div>
+                {editSubmitError && (
+                  <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">
+                    {editSubmitError}
+                  </div>
+                )}
                 <div className="flex justify-end space-x-3 pt-4">
                   <button
                     type="button"
-                    onClick={() => setShowEditModal(false)}
+                    onClick={handleCloseEditModal}
                     className="btn-secondary"
                   >
                     Hủy
                   </button>
-                  <button type="submit" className="btn-primary">
-                    Cập nhật
+                  <button type="submit" className="btn-primary" disabled={isUpdating}>
+                    {isUpdating ? 'Đang cập nhật...' : 'Cập nhật'}
                   </button>
                 </div>
               </form>
@@ -518,35 +949,48 @@ const UserManagement = () => {
               <p className="text-sm text-gray-600 mb-4">
                 Đặt lại mật khẩu cho: <strong>{selectedUser.fullName}</strong>
               </p>
-              <form className="space-y-4">
+              <form className="space-y-4" onSubmit={handleResetPasswordSubmit}>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Mật khẩu mới</label>
                   <input 
                     type="password" 
                     className="input-field" 
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
+                    value={resetPasswordForm.newPassword}
+                    onChange={(e) => handleResetPasswordInputChange('newPassword', e.target.value)}
                     placeholder="Nhập mật khẩu mới" 
                   />
+                  {resetPasswordErrors.newPassword && (
+                    <p className="mt-1 text-sm text-red-600">{resetPasswordErrors.newPassword}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Xác nhận mật khẩu</label>
                   <input 
                     type="password" 
                     className="input-field" 
+                    value={resetPasswordForm.confirmPassword}
+                    onChange={(e) => handleResetPasswordInputChange('confirmPassword', e.target.value)}
                     placeholder="Nhập lại mật khẩu mới" 
                   />
+                  {resetPasswordErrors.confirmPassword && (
+                    <p className="mt-1 text-sm text-red-600">{resetPasswordErrors.confirmPassword}</p>
+                  )}
                 </div>
+                {resetSubmitError && (
+                  <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">
+                    {resetSubmitError}
+                  </div>
+                )}
                 <div className="flex justify-end space-x-3 pt-4">
                   <button
                     type="button"
-                    onClick={() => setShowResetPasswordModal(false)}
+                    onClick={handleCloseResetPasswordModal}
                     className="btn-secondary"
                   >
                     Hủy
                   </button>
-                  <button type="submit" className="btn-primary">
-                    Đặt lại mật khẩu
+                  <button type="submit" className="btn-primary" disabled={isResettingPassword}>
+                    {isResettingPassword ? 'Đang xử lý...' : 'Đặt lại mật khẩu'}
                   </button>
                 </div>
               </form>

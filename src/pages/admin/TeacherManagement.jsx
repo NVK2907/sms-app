@@ -267,8 +267,12 @@ const TeacherManagement = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{teacher.qualification || 'N/A'}</div>
-                      <div className="text-sm text-gray-500">{teacher.experience || 'N/A'}</div>
+                  <div className="text-sm text-gray-900">{teacher.educationLevel || 'N/A'}</div>
+                  <div className="text-sm text-gray-500">
+                    {typeof teacher.experienceYears === 'number'
+                      ? `${teacher.experienceYears} năm`
+                      : teacher.experienceYears || 'N/A'}
+                  </div>
                       <div className="text-xs text-gray-400">
                         Tuyển dụng: {teacher.hireDate ? new Date(teacher.hireDate).toLocaleDateString('vi-VN') : 'N/A'}
                       </div>
@@ -472,20 +476,24 @@ const TeacherManagement = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Trình độ</label>
-                    <input 
-                      type="text" 
-                      className="input-field" 
-                      defaultValue={selectedTeacher.qualification}
-                      placeholder="Nhập trình độ học vấn" 
+                    <input
+                      type="text"
+                      className="input-field"
+                      defaultValue={selectedTeacher.educationLevel}
+                      placeholder="Nhập trình độ học vấn"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Kinh nghiệm</label>
-                    <input 
-                      type="text" 
-                      className="input-field" 
-                      defaultValue={selectedTeacher.experience}
-                      placeholder="Ví dụ: 5 năm" 
+                    <label className="block text-sm font-medium text-gray-700">Kinh nghiệm (năm)</label>
+                    <input
+                      type="number"
+                      className="input-field"
+                      defaultValue={
+                        typeof selectedTeacher.experienceYears === 'number'
+                          ? selectedTeacher.experienceYears
+                          : selectedTeacher.experienceYears || ''
+                      }
+                      placeholder="Ví dụ: 5"
                     />
                   </div>
                   <div>
@@ -617,14 +625,18 @@ const TeacherManagement = () => {
                     Thông tin nghề nghiệp
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500">Trình độ</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedTeacher.qualification}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500">Kinh nghiệm</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedTeacher.experience}</p>
-                    </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500">Trình độ</label>
+                        <p className="mt-1 text-sm text-gray-900">{selectedTeacher.educationLevel}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500">Kinh nghiệm</label>
+                        <p className="mt-1 text-sm text-gray-900">
+                          {typeof selectedTeacher.experienceYears === 'number'
+                            ? `${selectedTeacher.experienceYears} năm`
+                            : selectedTeacher.experienceYears}
+                        </p>
+                      </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-500">Ngày tuyển dụng</label>
                       <p className="mt-1 text-sm text-gray-900 flex items-center">
