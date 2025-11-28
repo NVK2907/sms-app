@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   ChartBarIcon,
   AcademicCapIcon,
@@ -12,6 +12,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 const StudentGrades = () => {
   const { user } = useAuth();
+  const studentId = user?.studentId ?? user?.id;
   const [loading, setLoading] = useState(true);
   const [grades, setGrades] = useState([]);
   const [gpa, setGpa] = useState(0);
@@ -19,16 +20,13 @@ const StudentGrades = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [semesters, setSemesters] = useState([]);
 
-  useEffect(() => {
-    loadGradesData();
-  }, [selectedSemester]);
-
-  const loadGradesData = async () => {
+  const loadGradesData = useCallback(async () => {
+    if (!studentId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const studentId = user?.id;
-      if (!studentId) return;
-
       const [gradesRes, gpaRes] = await Promise.all([
         selectedSemester === 'all' 
           ? studentFeaturesService.getStudentGrades(studentId)
@@ -57,7 +55,11 @@ const StudentGrades = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedSemester, studentId]);
+
+  useEffect(() => {
+    loadGradesData();
+  }, [loadGradesData]);
 
   const filteredGrades = grades.filter(grade =>
     grade.subjectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||

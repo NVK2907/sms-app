@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   AcademicCapIcon,
   BookOpenIcon,
@@ -14,6 +14,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 const TeacherDashboard = () => {
   const { user } = useAuth();
+  const teacherId = user?.teacherId ?? user?.id;
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalClasses: 0,
@@ -26,16 +27,13 @@ const TeacherDashboard = () => {
   const [recentActivities, setRecentActivities] = useState([]);
   const [upcomingSchedule, setUpcomingSchedule] = useState([]);
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
+    if (!teacherId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const teacherId = user?.id;
-      if (!teacherId) return;
-
       // Load stats
       const [classesRes, scheduleRes, gradesRes] = await Promise.all([
         teacherFeaturesService.getTeacherClasses(teacherId),
@@ -80,7 +78,11 @@ const TeacherDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [teacherId]);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
 
   if (loading) {
     return (

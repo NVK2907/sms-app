@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   ChartBarIcon,
   AcademicCapIcon,
@@ -10,9 +10,11 @@ import {
 } from '@heroicons/react/24/outline';
 import { teacherFeaturesService } from '../../services/teacherFeaturesService';
 import { useAuth } from '../../contexts/AuthContext';
+import { showComingSoon } from '../../utils/comingSoon';
 
 const TeacherGrades = () => {
   const { user } = useAuth();
+  const teacherId = user?.teacherId ?? user?.id;
   const [loading, setLoading] = useState(true);
   const [grades, setGrades] = useState([]);
   const [stats, setStats] = useState({
@@ -25,16 +27,13 @@ const TeacherGrades = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [classes, setClasses] = useState([]);
 
-  useEffect(() => {
-    loadGradesData();
-  }, [selectedClass]);
-
-  const loadGradesData = async () => {
+  const loadGradesData = useCallback(async () => {
+    if (!teacherId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const teacherId = user?.id;
-      if (!teacherId) return;
-
       const response = await teacherFeaturesService.getTeacherGrades(teacherId);
 
       // Handle different possible data structures
@@ -73,7 +72,11 @@ const TeacherGrades = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [teacherId]);
+
+  useEffect(() => {
+    loadGradesData();
+  }, [loadGradesData, selectedClass]);
 
   const filteredGrades = grades.filter(grade =>
     grade.studentName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -186,12 +189,12 @@ const TeacherGrades = () => {
           <div>
             <div className="flex justify-between text-sm font-medium text-gray-700 mb-1">
               <span>Tiến độ chấm điểm</span>
-              <span>{Math.round((stats.gradedStudents / stats.totalStudents) * 100)}%</span>
+              <span>{stats.totalStudents ? Math.round((stats.gradedStudents / stats.totalStudents) * 100) : 0}%</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3">
               <div 
                 className="bg-green-600 h-3 rounded-full" 
-                style={{ width: `${(stats.gradedStudents / stats.totalStudents) * 100}%` }}
+                style={{ width: `${stats.totalStudents ? (stats.gradedStudents / stats.totalStudents) * 100 : 0}%` }}
               ></div>
             </div>
           </div>
@@ -307,7 +310,7 @@ const TeacherGrades = () => {
                       <span className="text-sm text-gray-900">{getGradeStatus(grade.finalGrade)}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button className="text-indigo-600 hover:text-indigo-900">
+                      <button onClick={showComingSoon} className="text-indigo-600 hover:text-indigo-900">
                         Chỉnh sửa
                       </button>
                     </td>

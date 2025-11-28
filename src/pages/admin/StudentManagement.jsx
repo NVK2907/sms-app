@@ -17,6 +17,7 @@ const StudentManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedCourse, setSelectedCourse] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -124,10 +125,13 @@ const StudentManagement = () => {
   }, []);
 
   // Filter students based on class and course only (search is handled by API)
-  const filteredStudents = students.filter(student => {
+  const filteredStudents = students.filter((student) => {
     const matchesClass = selectedClass === 'all' || student.className === selectedClass;
     const matchesCourse = selectedCourse === 'all' || student.courseYear === selectedCourse;
-    return matchesClass && matchesCourse;
+    const matchesStatus =
+      selectedStatus === 'all' ||
+      (selectedStatus === 'active' ? student.isActive : !student.isActive);
+    return matchesClass && matchesCourse && matchesStatus;
   });
 
   const getStatusBadgeColor = (isActive) => {
@@ -357,7 +361,7 @@ const StudentManagement = () => {
 
       {/* Filters */}
       <div className="card">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
           <div className="md:col-span-2">
             <div className="relative">
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -397,6 +401,17 @@ const StudentManagement = () => {
               {Array.from(new Set(students.map(s => s.courseYear).filter(Boolean))).map(course => (
                 <option key={course} value={course}>Khóa {course}</option>
               ))}
+            </select>
+          </div>
+          <div>
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="input-field"
+            >
+              <option value="all">Tất cả trạng thái</option>
+              <option value="active">Đang học</option>
+              <option value="inactive">Nghỉ học</option>
             </select>
           </div>
           <div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   CalendarIcon,
   ClockIcon,
@@ -12,21 +12,19 @@ import { useAuth } from '../../contexts/AuthContext';
 
 const StudentSchedule = () => {
   const { user } = useAuth();
+  const studentId = user?.studentId ?? user?.id;
   const [loading, setLoading] = useState(true);
   const [schedule, setSchedule] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('week'); // 'week' or 'day'
 
-  useEffect(() => {
-    loadScheduleData();
-  }, [selectedDate, viewMode]);
-
-  const loadScheduleData = async () => {
+  const loadScheduleData = useCallback(async () => {
+    if (!studentId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const studentId = user?.id;
-      if (!studentId) return;
-
       let response;
       if (viewMode === 'week') {
         response = await studentFeaturesService.getWeeklySchedule(studentId);
@@ -48,7 +46,11 @@ const StudentSchedule = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [studentId, selectedDate, viewMode]);
+
+  useEffect(() => {
+    loadScheduleData();
+  }, [loadScheduleData]);
 
   const getWeekDays = () => {
     const startOfWeek = new Date(selectedDate);

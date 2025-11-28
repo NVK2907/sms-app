@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   UserGroupIcon,
   CalendarIcon,
@@ -12,9 +12,11 @@ import {
 } from '@heroicons/react/24/outline';
 import { teacherFeaturesService } from '../../services/teacherFeaturesService';
 import { useAuth } from '../../contexts/AuthContext';
+import { showComingSoon } from '../../utils/comingSoon';
 
 const TeacherAttendance = () => {
   const { user } = useAuth();
+  const teacherId = user?.teacherId ?? user?.id;
   const [loading, setLoading] = useState(true);
   const [attendance, setAttendance] = useState([]);
   const [stats, setStats] = useState({
@@ -29,16 +31,13 @@ const TeacherAttendance = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [classes, setClasses] = useState([]);
 
-  useEffect(() => {
-    loadAttendanceData();
-  }, [selectedClass]);
-
-  const loadAttendanceData = async () => {
+  const loadAttendanceData = useCallback(async () => {
+    if (!teacherId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const teacherId = user?.id;
-      if (!teacherId) return;
-
       // Set empty data - attendance API not implemented yet
       setAttendance([]);
       setStats({
@@ -56,7 +55,11 @@ const TeacherAttendance = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [teacherId]);
+
+  useEffect(() => {
+    loadAttendanceData();
+  }, [loadAttendanceData, selectedClass]);
 
   const filteredAttendance = attendance.filter(item =>
     item.studentName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -319,7 +322,7 @@ const TeacherAttendance = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button className="text-indigo-600 hover:text-indigo-900">
+                      <button onClick={showComingSoon} className="text-indigo-600 hover:text-indigo-900">
                         Cập nhật
                       </button>
                     </td>

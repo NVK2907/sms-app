@@ -32,6 +32,8 @@ const SubjectClassManagement = () => {
     totalElements: 0,
     totalPages: 0
   });
+  const [subjectStatusFilter, setSubjectStatusFilter] = useState('all');
+  const [classStatusFilter, setClassStatusFilter] = useState('all');
 
   // Load data from API
   const loadSubjects = async (page = 0, size = 10, keyword = null) => {
@@ -134,8 +136,27 @@ const SubjectClassManagement = () => {
     }
   };
 
-  // For classes, use API search results directly
-  const filteredClasses = activeTab === 'classes' ? classes : [];
+  const normalizedStatus = (status) => status?.toLowerCase() || 'inactive';
+
+  const filteredSubjects =
+    activeTab === 'subjects'
+      ? subjects.filter((subject) => {
+          if (subjectStatusFilter === 'all') {
+            return true;
+          }
+          return normalizedStatus(subject.status) === subjectStatusFilter;
+        })
+      : [];
+
+  const filteredClasses =
+    activeTab === 'classes'
+      ? classes.filter((cls) => {
+          if (classStatusFilter === 'all') {
+            return true;
+          }
+          return normalizedStatus(cls.status) === classStatusFilter;
+        })
+      : [];
 
   // Handle search
   const handleSearch = () => {
@@ -157,9 +178,6 @@ const SubjectClassManagement = () => {
       }
     }
   };
-
-  // For subjects, use API search results directly
-  const filteredSubjects = activeTab === 'subjects' ? subjects : [];
 
   const handleViewItem = (item) => {
     setSelectedItem(item);
@@ -217,8 +235,8 @@ const SubjectClassManagement = () => {
         </nav>
       </div>
 
-      {/* Search and Add Button */}
-      <div className="flex justify-between items-center">
+      {/* Search and Filters */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex-1 max-w-lg">
           <div className="relative">
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -236,21 +254,40 @@ const SubjectClassManagement = () => {
             />
           </div>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={handleSearch}
-            className="btn-secondary flex items-center space-x-2"
-          >
-            <MagnifyingGlassIcon className="h-4 w-4" />
-            <span>Tìm kiếm</span>
-          </button>
-          <button
-            onClick={() => activeTab === 'subjects' ? setShowAddSubjectModal(true) : setShowAddClassModal(true)}
-            className="btn-primary flex items-center space-x-2"
-          >
-            <PlusIcon className="h-5 w-5" />
-            <span>Thêm {activeTab === 'subjects' ? 'môn học' : 'lớp học'}</span>
-          </button>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="w-full sm:w-48">
+            <select
+              value={activeTab === 'subjects' ? subjectStatusFilter : classStatusFilter}
+              onChange={(e) =>
+                activeTab === 'subjects'
+                  ? setSubjectStatusFilter(e.target.value)
+                  : setClassStatusFilter(e.target.value)
+              }
+              className="input-field"
+            >
+              <option value="all">Tất cả trạng thái</option>
+              <option value="active">Hoạt động</option>
+              <option value="inactive">Không hoạt động</option>
+            </select>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleSearch}
+              className="btn-secondary flex items-center space-x-2"
+            >
+              <MagnifyingGlassIcon className="h-4 w-4" />
+              <span>Tìm kiếm</span>
+            </button>
+            <button
+              onClick={() =>
+                activeTab === 'subjects' ? setShowAddSubjectModal(true) : setShowAddClassModal(true)
+              }
+              className="btn-primary flex items-center space-x-2"
+            >
+              <PlusIcon className="h-5 w-5" />
+              <span>Thêm {activeTab === 'subjects' ? 'môn học' : 'lớp học'}</span>
+            </button>
+          </div>
         </div>
       </div>
 

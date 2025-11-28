@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   AcademicCapIcon,
   BookOpenIcon,
@@ -11,25 +11,24 @@ import {
 } from '@heroicons/react/24/outline';
 import { teacherFeaturesService } from '../../services/teacherFeaturesService';
 import { useAuth } from '../../contexts/AuthContext';
+import { showComingSoon } from '../../utils/comingSoon';
 
 const TeacherClasses = () => {
   const { user } = useAuth();
+  const teacherId = user?.teacherId ?? user?.id;
   const [loading, setLoading] = useState(true);
   const [classes, setClasses] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSemester, setSelectedSemester] = useState('all');
   const [semesters, setSemesters] = useState([]);
 
-  useEffect(() => {
-    loadClassesData();
-  }, [selectedSemester]);
-
-  const loadClassesData = async () => {
+  const loadClassesData = useCallback(async () => {
+    if (!teacherId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const teacherId = user?.id;
-      if (!teacherId) return;
-
       const response = await teacherFeaturesService.getTeacherClasses(teacherId);
 
       // Handle different possible data structures
@@ -53,7 +52,11 @@ const TeacherClasses = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [teacherId]);
+
+  useEffect(() => {
+    loadClassesData();
+  }, [loadClassesData, selectedSemester]);
 
   const filteredClasses = classes.filter(cls => {
     const matchesSearch = cls.className?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -90,6 +93,9 @@ const TeacherClasses = () => {
   };
 
   const stats = getClassStats();
+  const completionPercent = stats.totalClasses
+    ? Math.round((stats.completedClasses / stats.totalClasses) * 100)
+    : 0;
 
   if (loading) {
     return (
@@ -242,11 +248,17 @@ const TeacherClasses = () => {
               </div>
 
               <div className="flex space-x-2">
-                <button className="flex-1 bg-indigo-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 flex items-center justify-center">
+                <button
+                  onClick={showComingSoon}
+                  className="flex-1 bg-indigo-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 flex items-center justify-center"
+                >
                   <EyeIcon className="h-4 w-4 mr-1" />
                   Chi tiết
                 </button>
-                <button className="flex-1 bg-gray-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700">
+                <button
+                  onClick={showComingSoon}
+                  className="flex-1 bg-gray-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700"
+                >
                   Sinh viên
                 </button>
               </div>
@@ -274,12 +286,12 @@ const TeacherClasses = () => {
             <div>
               <div className="flex justify-between text-sm font-medium text-gray-700 mb-1">
                 <span>Tiến độ hoàn thành</span>
-                <span>{Math.round((stats.completedClasses / stats.totalClasses) * 100)}%</span>
+                <span>{completionPercent}%</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div 
                   className="bg-green-600 h-2 rounded-full" 
-                  style={{ width: `${(stats.completedClasses / stats.totalClasses) * 100}%` }}
+                  style={{ width: `${completionPercent}%` }}
                 ></div>
               </div>
             </div>

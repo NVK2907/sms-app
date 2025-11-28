@@ -14,6 +14,8 @@ export const authService = {
         // Transform userInfo to match expected format
         const userInfo = {
           id: data.userInfo.id,
+          studentId: data.userInfo.studentId,
+          teacherId: data.userInfo.teacherId,
           username: data.userInfo.username,
           email: data.userInfo.email,
           fullName: data.userInfo.fullName,

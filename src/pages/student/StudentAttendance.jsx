@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   UserGroupIcon,
   CalendarIcon,
@@ -14,6 +14,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 const StudentAttendance = () => {
   const { user } = useAuth();
+  const studentId = user?.studentId ?? user?.id;
   const [loading, setLoading] = useState(true);
   const [attendance, setAttendance] = useState([]);
   const [stats, setStats] = useState({
@@ -27,16 +28,13 @@ const StudentAttendance = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [classes, setClasses] = useState([]);
 
-  useEffect(() => {
-    loadAttendanceData();
-  }, [selectedClass]);
-
-  const loadAttendanceData = async () => {
+  const loadAttendanceData = useCallback(async () => {
+    if (!studentId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const studentId = user?.id;
-      if (!studentId) return;
-
       // Set empty data - attendance API not implemented yet
       setAttendance([]);
       setStats({
@@ -53,7 +51,11 @@ const StudentAttendance = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [studentId]);
+
+  useEffect(() => {
+    loadAttendanceData();
+  }, [loadAttendanceData]);
 
   const filteredAttendance = attendance.filter(item => {
     const matchesSearch = item.className?.toLowerCase().includes(searchTerm.toLowerCase()) ||

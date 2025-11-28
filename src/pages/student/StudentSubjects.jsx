@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   BookOpenIcon,
   AcademicCapIcon,
@@ -10,25 +10,29 @@ import {
 } from '@heroicons/react/24/outline';
 import { studentFeaturesService } from '../../services/studentFeaturesService';
 import { useAuth } from '../../contexts/AuthContext';
+import { showComingSoon } from '../../utils/comingSoon';
 
 const StudentSubjects = () => {
   const { user } = useAuth();
+  const studentId = user?.studentId ?? user?.id;
   const [loading, setLoading] = useState(true);
   const [subjects, setSubjects] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSemester, setSelectedSemester] = useState('all');
   const [semesters, setSemesters] = useState([]);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [selectedClass, setSelectedClass] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState(null);
+  const [detailTargetId, setDetailTargetId] = useState(null);
 
-  useEffect(() => {
-    loadSubjectsData();
-  }, [selectedSemester]);
-
-  const loadSubjectsData = async () => {
+  const loadSubjectsData = useCallback(async () => {
+    if (!studentId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const studentId = user?.id;
-      if (!studentId) return;
-
       const response = await studentFeaturesService.getRegisteredClasses(studentId);
 
       // Handle different possible data structures
@@ -52,7 +56,11 @@ const StudentSubjects = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [studentId]);
+
+  useEffect(() => {
+    loadSubjectsData();
+  }, [loadSubjectsData]);
 
   const filteredSubjects = subjects.filter(subject => {
     const matchesSearch = subject.subjectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -89,6 +97,48 @@ const StudentSubjects = () => {
   };
 
   const stats = getSubjectStats();
+  const completionPercent = stats.totalSubjects
+    ? Math.round((stats.completedSubjects / stats.totalSubjects) * 100)
+    : 0;
+
+  const formatSchedule = (schedules = []) => {
+    if (!Array.isArray(schedules) || schedules.length === 0) {
+      return 'Chưa cập nhật';
+    }
+    return schedules
+      .map((schedule) => {
+        const timeRange = schedule.startTime && schedule.endTime
+          ? `${schedule.startTime} - ${schedule.endTime}`
+          : 'Không xác định';
+        return `${schedule.dayOfWeek || 'N/A'} (${timeRange})${schedule.room ? ` - ${schedule.room}` : ''}`;
+      })
+      .join('; ');
+  };
+
+  const handleViewDetails = async (classId) => {
+    if (!studentId) return;
+    setDetailError(null);
+    setDetailTargetId(classId);
+    setDetailLoading(true);
+    try {
+      const response = await studentFeaturesService.getClassDetails(studentId, classId);
+      const detailData = response?.data || response || null;
+      setSelectedClass(detailData);
+      setDetailModalOpen(true);
+    } catch (error) {
+      console.error('Lỗi khi lấy chi tiết môn học:', error);
+      setDetailError(error?.message || 'Không thể tải chi tiết môn học');
+    } finally {
+      setDetailLoading(false);
+      setDetailTargetId(null);
+    }
+  };
+
+  const closeDetailModal = () => {
+    setDetailModalOpen(false);
+    setSelectedClass(null);
+    setDetailError(null);
+  };
 
   if (loading) {
     return (
@@ -241,11 +291,22 @@ const StudentSubjects = () => {
               </div>
 
               <div className="flex space-x-2">
-                <button className="flex-1 bg-indigo-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 flex items-center justify-center">
+                <button
+                  onClick={() => handleViewDetails(subject.id)}
+                  disabled={detailLoading && detailTargetId === subject.id}
+                  className={`flex-1 px-3 py-2 rounded-md text-sm font-medium text-white flex items-center justify-center ${
+                    detailLoading && detailTargetId === subject.id
+                      ? 'bg-indigo-300 cursor-not-allowed'
+                      : 'bg-indigo-600 hover:bg-indigo-700'
+                  }`}
+                >
                   <EyeIcon className="h-4 w-4 mr-1" />
                   Chi tiết
                 </button>
-                <button className="flex-1 bg-gray-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700">
+                <button
+                  onClick={showComingSoon}
+                  className="flex-1 bg-gray-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700"
+                >
                   Tài liệu
                 </button>
               </div>
@@ -273,12 +334,12 @@ const StudentSubjects = () => {
             <div>
               <div className="flex justify-between text-sm font-medium text-gray-700 mb-1">
                 <span>Tiến độ hoàn thành</span>
-                <span>{Math.round((stats.completedSubjects / stats.totalSubjects) * 100)}%</span>
+                <span>{completionPercent}%</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div 
                   className="bg-green-600 h-2 rounded-full" 
-                  style={{ width: `${(stats.completedSubjects / stats.totalSubjects) * 100}%` }}
+                  style={{ width: `${completionPercent}%` }}
                 ></div>
               </div>
             </div>
@@ -296,6 +357,84 @@ const StudentSubjects = () => {
                 <div className="text-2xl font-bold text-yellow-600">{stats.upcomingSubjects}</div>
                 <div className="text-sm text-gray-500">Sắp bắt đầu</div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {detailError && (
+        <p className="text-sm text-red-600">{detailError}</p>
+      )}
+
+      {detailModalOpen && selectedClass && (
+        <div className="fixed inset-0 bg-gray-800/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full">
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                <BookOpenIcon className="h-5 w-5 text-indigo-600 mr-2" />
+                Chi tiết môn {selectedClass.subjectName}
+              </h3>
+              <button
+                onClick={closeDetailModal}
+                className="text-gray-400 hover:text-gray-600"
+                aria-label="Đóng"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs uppercase text-gray-500">Mã lớp</p>
+                  <p className="text-sm font-medium text-gray-900">{selectedClass.classCode}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-gray-500">Học kỳ</p>
+                  <p className="text-sm font-medium text-gray-900">{selectedClass.semesterName}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-gray-500">Giáo viên</p>
+                  <p className="text-sm font-medium text-gray-900">{selectedClass.teacherName || 'Đang cập nhật'}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-gray-500">Số lượng</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {selectedClass.currentStudentCount || 0}/{selectedClass.maxStudent || 0}
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-sm font-semibold text-gray-900 mb-2">Lịch học</p>
+                {selectedClass.schedules && selectedClass.schedules.length > 0 ? (
+                  <ul className="space-y-2">
+                    {selectedClass.schedules.map((schedule, index) => (
+                      <li key={`${schedule.dayOfWeek}-${index}`} className="flex items-center text-sm text-gray-600">
+                        <ClockIcon className="h-4 w-4 mr-2 text-gray-500" />
+                        <span>
+                          {schedule.dayOfWeek || 'N/A'} · {schedule.startTime || '??'} - {schedule.endTime || '??'}
+                          {schedule.room ? ` (${schedule.room})` : ''}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-gray-500">Chưa cập nhật lịch học</p>
+                )}
+              </div>
+
+              <div className="rounded-md bg-blue-50 text-blue-700 p-4 text-sm">
+                {selectedClass.isRegistered
+                  ? 'Bạn đã đăng ký lớp học này.'
+                  : 'Bạn chưa đăng ký lớp này. Hãy quay lại trang Lớp học để đăng ký.'}
+              </div>
+            </div>
+
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end">
+              <button onClick={closeDetailModal} className="btn-secondary">
+                Đóng
+              </button>
             </div>
           </div>
         </div>

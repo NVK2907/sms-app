@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   BookOpenIcon,
   AcademicCapIcon,
@@ -10,25 +10,24 @@ import {
 } from '@heroicons/react/24/outline';
 import { teacherFeaturesService } from '../../services/teacherFeaturesService';
 import { useAuth } from '../../contexts/AuthContext';
+import { showComingSoon } from '../../utils/comingSoon';
 
 const TeacherSubjects = () => {
   const { user } = useAuth();
+  const teacherId = user?.teacherId ?? user?.id;
   const [loading, setLoading] = useState(true);
   const [subjects, setSubjects] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSemester, setSelectedSemester] = useState('all');
   const [semesters, setSemesters] = useState([]);
 
-  useEffect(() => {
-    loadSubjectsData();
-  }, [selectedSemester]);
-
-  const loadSubjectsData = async () => {
+  const loadSubjectsData = useCallback(async () => {
+    if (!teacherId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const teacherId = user?.id;
-      if (!teacherId) return;
-
       const response = await teacherFeaturesService.getTeacherSubjects(teacherId);
 
       // Handle different possible data structures
@@ -52,7 +51,11 @@ const TeacherSubjects = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [teacherId]);
+
+  useEffect(() => {
+    loadSubjectsData();
+  }, [loadSubjectsData, selectedSemester]);
 
   const filteredSubjects = subjects.filter(subject => {
     const matchesSearch = subject.subjectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -223,11 +226,17 @@ const TeacherSubjects = () => {
               </div>
 
               <div className="flex space-x-2">
-                <button className="flex-1 bg-indigo-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 flex items-center justify-center">
+                <button
+                  onClick={showComingSoon}
+                  className="flex-1 bg-indigo-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 flex items-center justify-center"
+                >
                   <EyeIcon className="h-4 w-4 mr-1" />
                   Chi tiết
                 </button>
-                <button className="flex-1 bg-gray-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700">
+                <button
+                  onClick={showComingSoon}
+                  className="flex-1 bg-gray-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700"
+                >
                   Lớp học
                 </button>
               </div>

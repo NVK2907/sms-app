@@ -16,6 +16,7 @@ import Pagination from '../../components/Pagination';
 const TeacherManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -89,15 +90,19 @@ const TeacherManagement = () => {
   };
 
   // Filter teachers based on subject only (search is handled by API)
-  const filteredTeachers = teachers.filter(teacher => {
-    const matchesSubject = selectedSubject === 'all' || 
-                          teacher.subjects?.some(subject => subject.subjectName === selectedSubject);
-    return matchesSubject;
+  const filteredTeachers = teachers.filter((teacher) => {
+    const matchesSubject =
+      selectedSubject === 'all' ||
+      teacher.subjects?.some((subject) => subject.subjectName === selectedSubject);
+    const matchesStatus =
+      selectedStatus === 'all' ||
+      (selectedStatus === 'active' ? teacher.isActive : !teacher.isActive);
+    return matchesSubject && matchesStatus;
   });
 
-  const getStatusBadgeColor = (status) => {
-    return status === 'active' 
-      ? 'bg-green-100 text-green-800' 
+  const getStatusBadgeColor = (isActive) => {
+    return isActive
+      ? 'bg-green-100 text-green-800'
       : 'bg-gray-100 text-gray-800';
   };
 
@@ -142,7 +147,7 @@ const TeacherManagement = () => {
 
       {/* Filters */}
       <div className="card">
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -170,6 +175,17 @@ const TeacherManagement = () => {
               {Array.from(new Set(teachers.flatMap(t => t.subjects?.map(s => s.subjectName) || []))).map(subject => (
                 <option key={subject} value={subject}>{subject}</option>
               ))}
+            </select>
+          </div>
+          <div className="sm:w-48">
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="input-field"
+            >
+              <option value="all">Tất cả trạng thái</option>
+              <option value="active">Đang dạy</option>
+              <option value="inactive">Nghỉ việc</option>
             </select>
           </div>
           <div className="flex gap-2">

@@ -65,6 +65,16 @@ export const studentFeaturesService = {
     }
   },
 
+  // Lấy chi tiết lớp học
+  getClassDetails: async (studentId, classId) => {
+    try {
+      const response = await api.get(`/student/${studentId}/classes/${classId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
   // Đăng ký lớp học
   registerClass: async (registrationData) => {
     try {

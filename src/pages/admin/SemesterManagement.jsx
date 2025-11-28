@@ -31,6 +31,8 @@ const SemesterManagement = () => {
     totalElements: 0,
     totalPages: 0
   });
+  const [semesterStatusFilter, setSemesterStatusFilter] = useState('all');
+  const [academicYearStatusFilter, setAcademicYearStatusFilter] = useState('all');
 
   // Load data from API
   const loadSemesters = async (page = 0, size = 10) => {
@@ -99,14 +101,74 @@ const SemesterManagement = () => {
     }
   }, [activeTab]);
 
-  const filteredSemesters = semesters.filter(semester =>
-    semester.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    semester.academicYearName?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const getSemesterStatusValue = (semester) => (semester.isOpen ? 'open' : 'closed');
+  const getSemesterStatusLabel = (value) => (value === 'open' ? 'Đang mở' : 'Đã đóng');
 
-  const filteredAcademicYears = academicYears.filter(year =>
-    year.name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const getAcademicYearStatusValue = (year) => {
+    const now = new Date();
+    const start = year.startDate ? new Date(year.startDate) : null;
+    const end = year.endDate ? new Date(year.endDate) : null;
+
+    if (start && end) {
+      if (now < start) return 'upcoming';
+      if (now > end) return 'completed';
+      return 'ongoing';
+    }
+
+    if (start) {
+      return now >= start ? 'ongoing' : 'upcoming';
+    }
+
+    if (end) {
+      return now > end ? 'completed' : 'ongoing';
+    }
+
+    return 'unknown';
+  };
+
+  const getAcademicYearStatusLabel = (value) => {
+    switch (value) {
+      case 'upcoming':
+        return 'Sắp diễn ra';
+      case 'ongoing':
+        return 'Đang diễn ra';
+      case 'completed':
+        return 'Đã kết thúc';
+      default:
+        return 'Chưa xác định';
+    }
+  };
+
+  const getAcademicYearStatusColor = (value) => {
+    switch (value) {
+      case 'upcoming':
+        return 'bg-blue-100 text-blue-800';
+      case 'ongoing':
+        return 'bg-green-100 text-green-800';
+      case 'completed':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-yellow-100 text-yellow-800';
+    }
+  };
+
+  const filteredSemesters = semesters.filter((semester) => {
+    const matchesSearch =
+      semester.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      semester.academicYearName?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      semesterStatusFilter === 'all' ||
+      getSemesterStatusValue(semester) === semesterStatusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const filteredAcademicYears = academicYears.filter((year) => {
+    const matchesSearch = year.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const yearStatus = getAcademicYearStatusValue(year);
+    const matchesStatus =
+      academicYearStatusFilter === 'all' || yearStatus === academicYearStatusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   const handleViewItem = (item) => {
     setSelectedItem(item);
@@ -174,8 +236,8 @@ const SemesterManagement = () => {
         </nav>
       </div>
 
-      {/* Search and Add Button */}
-      <div className="flex justify-between items-center">
+      {/* Search and Filters */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex-1 max-w-lg">
           <div className="relative">
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -188,13 +250,43 @@ const SemesterManagement = () => {
             />
           </div>
         </div>
-        <button
-          onClick={() => activeTab === 'semesters' ? setShowAddSemesterModal(true) : setShowAddAcademicYearModal(true)}
-          className="btn-primary flex items-center space-x-2"
-        >
-          <PlusIcon className="h-5 w-5" />
-          <span>Thêm {activeTab === 'semesters' ? 'học kỳ' : 'năm học'}</span>
-        </button>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="w-full sm:w-48">
+            {activeTab === 'semesters' ? (
+              <select
+                value={semesterStatusFilter}
+                onChange={(e) => setSemesterStatusFilter(e.target.value)}
+                className="input-field"
+              >
+                <option value="all">Tất cả trạng thái</option>
+                <option value="open">Đang mở</option>
+                <option value="closed">Đã đóng</option>
+              </select>
+            ) : (
+              <select
+                value={academicYearStatusFilter}
+                onChange={(e) => setAcademicYearStatusFilter(e.target.value)}
+                className="input-field"
+              >
+                <option value="all">Tất cả trạng thái</option>
+                <option value="upcoming">Sắp diễn ra</option>
+                <option value="ongoing">Đang diễn ra</option>
+                <option value="completed">Đã kết thúc</option>
+              </select>
+            )}
+          </div>
+          <button
+            onClick={() =>
+              activeTab === 'semesters'
+                ? setShowAddSemesterModal(true)
+                : setShowAddAcademicYearModal(true)
+            }
+            className="btn-primary flex items-center space-x-2"
+          >
+            <PlusIcon className="h-5 w-5" />
+            <span>Thêm {activeTab === 'semesters' ? 'học kỳ' : 'năm học'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Content */}
@@ -328,8 +420,10 @@ const SemesterManagement = () => {
                     </td>
                   </tr>
                 ) : filteredAcademicYears.length > 0 ? (
-                  filteredAcademicYears.map((year) => (
-                    <tr key={year.id} className="hover:bg-gray-50">
+                  filteredAcademicYears.map((year) => {
+                    const yearStatus = getAcademicYearStatusValue(year);
+                    return (
+                      <tr key={year.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
                           <div className="text-sm font-medium text-gray-900">
@@ -346,9 +440,14 @@ const SemesterManagement = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                          {year.semesters?.length || 0} học kỳ
-                        </span>
+                        <div className="flex flex-col space-y-1">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getAcademicYearStatusColor(yearStatus)}`}>
+                            {getAcademicYearStatusLabel(yearStatus)}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {year.semesters?.length || 0} học kỳ
+                          </span>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end space-x-2">
@@ -376,7 +475,8 @@ const SemesterManagement = () => {
                         </div>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 ) : (
                   <tr>
                     <td colSpan="4" className="px-6 py-4 text-center text-gray-500">
@@ -624,6 +724,12 @@ const SemesterManagement = () => {
                       />
                     </div>
                     <div>
+                      <label className="block text-sm font-medium text-gray-700">Trạng thái</label>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getAcademicYearStatusColor(getAcademicYearStatusValue(selectedItem))}`}>
+                        {getAcademicYearStatusLabel(getAcademicYearStatusValue(selectedItem))}
+                      </span>
+                    </div>
+                    <div>
                       <label className="block text-sm font-medium text-gray-700">Ngày bắt đầu</label>
                       <input 
                         type="date" 
@@ -783,9 +889,15 @@ const SemesterManagement = () => {
                     <p className="text-sm text-gray-500">ID: {selectedItem.id}</p>
                   )}
                   <div className="mt-4">
-                    <span className="inline-flex px-3 py-1 text-sm font-semibold rounded-full bg-blue-100 text-blue-800">
-                      {selectedItem.semesters?.length || 0} học kỳ
-                    </span>
+                    {activeTab === 'semesters' ? (
+                      <span className="inline-flex px-3 py-1 text-sm font-semibold rounded-full bg-blue-100 text-blue-800">
+                        {selectedItem.semesters?.length || 0} học kỳ
+                      </span>
+                    ) : (
+                      <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${getAcademicYearStatusColor(getAcademicYearStatusValue(selectedItem))}`}>
+                        {getAcademicYearStatusLabel(getAcademicYearStatusValue(selectedItem))}
+                      </span>
+                    )}
                   </div>
                 </div>
 

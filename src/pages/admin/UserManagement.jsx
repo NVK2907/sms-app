@@ -55,6 +55,7 @@ const UserManagement = () => {
   const [resetSubmitError, setResetSubmitError] = useState(null);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [notification, setNotification] = useState(null);
+  const [selectedStatus, setSelectedStatus] = useState('all');
   const notificationTimeoutRef = useRef(null);
 
   const showNotification = (type, message) => {
@@ -154,9 +155,13 @@ const UserManagement = () => {
 
   // Filter users based on role only (search is handled by API)
   const filteredUsers = users.filter(user => {
-    const matchesRole = selectedRole === 'all' || 
-                       user.roles?.some(role => role.roleName?.toLowerCase() === selectedRole);
-    return matchesRole;
+    const matchesRole =
+      selectedRole === 'all' ||
+      user.roles?.some((role) => role.roleName?.toLowerCase() === selectedRole);
+    const matchesStatus =
+      selectedStatus === 'all' ||
+      (selectedStatus === 'active' ? user.isActive : !user.isActive);
+    return matchesRole && matchesStatus;
   });
 
   // Debug log to check users data
@@ -572,6 +577,17 @@ const UserManagement = () => {
               <option value="admin">Quản trị viên</option>
               <option value="teacher">Giáo viên</option>
               <option value="student">Học sinh</option>
+            </select>
+          </div>
+          <div className="sm:w-48">
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="input-field"
+            >
+              <option value="all">Tất cả trạng thái</option>
+              <option value="active">Hoạt động</option>
+              <option value="inactive">Không hoạt động</option>
             </select>
           </div>
           <div className="flex gap-2">
