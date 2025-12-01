@@ -603,178 +603,165 @@ const TeacherManagement = () => {
       {/* View Teacher Details Modal */}
       {showViewModal && selectedTeacher && (
         <div className={`fixed inset-0 bg-gray-800/10 backdrop-blur-[2px] flex items-center justify-center z-50 transition-opacity duration-300 ${showViewModal ? 'opacity-100' : 'opacity-0'}`}>
-          <div className="relative p-6 border w-full max-w-4xl shadow-lg rounded-md bg-white">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-semibold text-gray-900">Chi tiết giáo viên</h3>
+          <div className="relative p-4 border w-full max-w-xl shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Chi tiết giáo viên</h3>
               <button
                 onClick={() => setShowViewModal(false)}
                 className="text-gray-400 hover:text-gray-600"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="space-y-4">
+              {/* Avatar và thông tin tóm tắt */}
+              <div className="bg-gray-50 rounded-lg p-4 text-center">
+                <div className="flex justify-center mb-3">
+                  <div className="h-16 w-16 rounded-full bg-indigo-100 flex items-center justify-center">
+                    <span className="text-xl font-bold text-indigo-600">
+                      {selectedTeacher.fullName?.split(' ').map(n => n[0]).join('') || 'T'}
+                    </span>
+                  </div>
+                </div>
+                <h3 className="text-base font-medium text-gray-900">{selectedTeacher.fullName}</h3>
+                <p className="text-sm text-gray-500">{selectedTeacher.teacherCode}</p>
+                <div className="mt-2">
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(selectedTeacher.isActive)}`}>
+                    {selectedTeacher.isActive ? 'Đang dạy' : 'Nghỉ việc'}
+                  </span>
+                </div>
+              </div>
+
               {/* Thông tin cá nhân */}
-              <div className="lg:col-span-2 space-y-6">
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                    <UserIcon className="h-5 w-5 mr-2" />
-                    Thông tin cá nhân
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="text-base font-medium text-gray-900 mb-3 flex items-center">
+                  <UserIcon className="h-4 w-4 mr-2" />
+                  Thông tin cá nhân
+                </h4>
+                <div className="grid grid-cols-1 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500">Họ và tên</label>
+                    <p className="mt-1 text-sm text-gray-900">{selectedTeacher.fullName}</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500">Mã giáo viên</label>
+                    <p className="mt-1 text-sm text-gray-900 font-mono">{selectedTeacher.teacherCode}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-500">Họ và tên</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedTeacher.fullName}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500">Mã giáo viên</label>
-                      <p className="mt-1 text-sm text-gray-900 font-mono">{selectedTeacher.teacherCode}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500">Ngày sinh</label>
+                      <label className="block text-xs font-medium text-gray-500">Ngày sinh</label>
                       <p className="mt-1 text-sm text-gray-900">{selectedTeacher.dob ? new Date(selectedTeacher.dob).toLocaleDateString('vi-VN') : 'N/A'}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-500">Giới tính</label>
+                      <label className="block text-xs font-medium text-gray-500">Giới tính</label>
                       <p className="mt-1 text-sm text-gray-900">{getGenderText(selectedTeacher.gender)}</p>
                     </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-500">Địa chỉ</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedTeacher.address}</p>
-                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500">Địa chỉ</label>
+                    <p className="mt-1 text-sm text-gray-900">{selectedTeacher.address}</p>
                   </div>
                 </div>
+              </div>
 
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                    <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    Thông tin liên hệ
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500">Email</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedTeacher.email}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500">Số điện thoại</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedTeacher.phone}</p>
-                    </div>
+              {/* Thông tin liên hệ */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="text-base font-medium text-gray-900 mb-3 flex items-center">
+                  <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  Thông tin liên hệ
+                </h4>
+                <div className="grid grid-cols-1 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500">Email</label>
+                    <p className="mt-1 text-sm text-gray-900">{selectedTeacher.email}</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500">Số điện thoại</label>
+                    <p className="mt-1 text-sm text-gray-900">{selectedTeacher.phone}</p>
                   </div>
                 </div>
+              </div>
 
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                    <AcademicCapIcon className="h-5 w-5 mr-2" />
-                    Thông tin nghề nghiệp
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-500">Trình độ</label>
-                        <p className="mt-1 text-sm text-gray-900">{selectedTeacher.educationLevel}</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-500">Kinh nghiệm</label>
-                        <p className="mt-1 text-sm text-gray-900">
-                          {typeof selectedTeacher.experienceYears === 'number'
-                            ? `${selectedTeacher.experienceYears} năm`
-                            : selectedTeacher.experienceYears}
-                        </p>
-                      </div>
+              {/* Thông tin nghề nghiệp */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="text-base font-medium text-gray-900 mb-3 flex items-center">
+                  <AcademicCapIcon className="h-4 w-4 mr-2" />
+                  Thông tin nghề nghiệp
+                </h4>
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-500">Ngày tuyển dụng</label>
+                      <label className="block text-xs font-medium text-gray-500">Trình độ</label>
+                      <p className="mt-1 text-sm text-gray-900">{selectedTeacher.educationLevel}</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500">Kinh nghiệm</label>
+                      <p className="mt-1 text-sm text-gray-900">
+                        {typeof selectedTeacher.experienceYears === 'number'
+                          ? `${selectedTeacher.experienceYears} năm`
+                          : selectedTeacher.experienceYears}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500">Ngày tuyển dụng</label>
                       <p className="mt-1 text-sm text-gray-900 flex items-center">
-                        <CalendarIcon className="h-4 w-4 mr-1" />
+                        <CalendarIcon className="h-3 w-3 mr-1" />
                         {selectedTeacher.hireDate ? new Date(selectedTeacher.hireDate).toLocaleDateString('vi-VN') : 'N/A'}
                       </p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-500">Trạng thái</label>
+                      <label className="block text-xs font-medium text-gray-500">Trạng thái</label>
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(selectedTeacher.isActive)}`}>
                         {selectedTeacher.isActive ? 'Đang dạy' : 'Nghỉ việc'}
                       </span>
                     </div>
                   </div>
                 </div>
-
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                    <BookOpenIcon className="h-5 w-5 mr-2" />
-                    Môn dạy & Lớp
-                  </h4>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500">Môn dạy</label>
-                      <div className="mt-1 flex flex-wrap gap-2">
-                        {selectedTeacher.subjects?.map((subject, index) => (
-                          <span key={index} className="inline-flex px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                            {subject.subjectName || subject}
-                          </span>
-                        )) || <span className="text-gray-400 text-sm">Chưa có môn</span>}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500">Lớp dạy</label>
-                      <div className="mt-1 flex flex-wrap gap-2">
-                        {selectedTeacher.classes?.map((cls, index) => (
-                          <span key={index} className="inline-flex px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                            {cls}
-                          </span>
-                        )) || <span className="text-gray-400 text-sm">Chưa có lớp</span>}
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </div>
 
-              {/* Avatar và thông tin tóm tắt */}
-              <div className="space-y-6">
-                <div className="bg-gray-50 rounded-lg p-6 text-center">
-                  <div className="flex justify-center mb-4">
-                    <div className="h-24 w-24 rounded-full bg-indigo-100 flex items-center justify-center">
-                      <span className="text-2xl font-bold text-indigo-600">
-                        {selectedTeacher.fullName?.split(' ').map(n => n[0]).join('') || 'T'}
-                      </span>
+              {/* Môn dạy & Lớp */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="text-base font-medium text-gray-900 mb-3 flex items-center">
+                  <BookOpenIcon className="h-4 w-4 mr-2" />
+                  Môn dạy & Lớp
+                </h4>
+                <div className="space-y-2">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Môn dạy</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedTeacher.subjects?.map((subject, index) => (
+                        <span key={index} className="inline-flex px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                          {subject.subjectName || subject}
+                        </span>
+                      )) || <span className="text-gray-400 text-xs">Chưa có môn</span>}
                     </div>
                   </div>
-                  <h3 className="text-lg font-medium text-gray-900">{selectedTeacher.fullName}</h3>
-                  <p className="text-sm text-gray-500">{selectedTeacher.teacherCode}</p>
-                  <div className="mt-4">
-                    <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${getStatusBadgeColor(selectedTeacher.isActive)}`}>
-                      {selectedTeacher.isActive ? 'Đang dạy' : 'Nghỉ việc'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h4 className="text-lg font-medium text-gray-900 mb-4">Thống kê</h4>
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-500">Thời gian làm việc:</span>
-                      <span className="text-sm font-medium text-gray-900">
-                        {selectedTeacher.hireDate ? Math.floor((new Date() - new Date(selectedTeacher.hireDate)) / (1000 * 60 * 60 * 24 * 30)) : 0} tháng
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-500">Tuổi:</span>
-                      <span className="text-sm font-medium text-gray-900">
-                        {selectedTeacher.dob ? new Date().getFullYear() - new Date(selectedTeacher.dob).getFullYear() : 'N/A'} tuổi
-                      </span>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Lớp dạy</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedTeacher.classes?.map((cls, index) => (
+                        <span key={index} className="inline-flex px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                          {cls}
+                        </span>
+                      )) || <span className="text-gray-400 text-xs">Chưa có lớp</span>}
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+            <div className="flex justify-end space-x-2 pt-4 mt-4 border-t border-gray-200">
               <button
                 type="button"
                 onClick={() => setShowViewModal(false)}
-                className="btn-secondary"
+                className="btn-secondary text-sm px-3 py-1.5"
               >
                 Đóng
               </button>
@@ -784,7 +771,7 @@ const TeacherManagement = () => {
                   setShowViewModal(false);
                   handleEditTeacher(selectedTeacher);
                 }}
-                className="btn-primary"
+                className="btn-primary text-sm px-3 py-1.5"
               >
                 Chỉnh sửa
               </button>

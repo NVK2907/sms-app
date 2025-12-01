@@ -11,6 +11,7 @@ import {
   CalendarIcon
 } from '@heroicons/react/24/outline';
 import { studentService } from '../../services/studentService';
+import { classService } from '../../services/classService';
 import Pagination from '../../components/Pagination';
 
 const StudentManagement = () => {
@@ -32,6 +33,10 @@ const StudentManagement = () => {
   });
   const [notification, setNotification] = useState(null);
   const notificationTimeoutRef = useRef(null);
+  const [classOptions, setClassOptions] = useState([]);
+  const [classOptionsLoading, setClassOptionsLoading] = useState(false);
+  const [courseOptions, setCourseOptions] = useState([]);
+  const [courseOptionsLoading, setCourseOptionsLoading] = useState(false);
   const [editStudentForm, setEditStudentForm] = useState({
     fullName: '',
     studentCode: '',
@@ -122,6 +127,51 @@ const StudentManagement = () => {
 
   useEffect(() => {
     loadStudents();
+
+    const loadClassOptions = async () => {
+      setClassOptionsLoading(true);
+      try {
+        const response = await classService.getAllClasses(0, 1000);
+        if (response.success) {
+          setClassOptions(response.data.classes || []);
+        } else {
+          console.error('Class API returned success: false', response.message);
+          setClassOptions([]);
+        }
+      } catch (error) {
+        console.error('Lỗi khi tải danh sách lớp học cho dropdown sinh viên:', error);
+        setClassOptions([]);
+      } finally {
+        setClassOptionsLoading(false);
+      }
+    };
+
+    const loadCourseOptions = async () => {
+      setCourseOptionsLoading(true);
+      try {
+        // Tạm thời suy ra danh sách khóa từ dữ liệu sinh viên đã tải,
+        // sau này có API riêng (vd: /courses hoặc /students/course-years) thì chỉ cần thay logic tại đây.
+        const response = await studentService.getAllStudents(0, 1000);
+        if (response.success) {
+          const studentsData = response.data.students || [];
+          const uniqueCourses = Array.from(
+            new Set(studentsData.map((s) => s.courseYear).filter(Boolean))
+          );
+          setCourseOptions(uniqueCourses);
+        } else {
+          console.error('Student API returned success: false khi load khóa học', response.message);
+          setCourseOptions([]);
+        }
+      } catch (error) {
+        console.error('Lỗi khi tải danh sách khóa học cho dropdown sinh viên:', error);
+        setCourseOptions([]);
+      } finally {
+        setCourseOptionsLoading(false);
+      }
+    };
+
+    loadClassOptions();
+    loadCourseOptions();
   }, []);
 
   // Filter students based on class and course only (search is handled by API)
@@ -384,10 +434,16 @@ const StudentManagement = () => {
               value={selectedClass}
               onChange={(e) => setSelectedClass(e.target.value)}
               className="input-field"
+              disabled={classOptionsLoading}
             >
               <option value="all">Tất cả lớp</option>
-              {Array.from(new Set(students.map(s => s.className).filter(Boolean))).map(cls => (
-                <option key={cls} value={cls}>{cls}</option>
+              {classOptions.map((cls) => (
+                <option
+                  key={cls.id}
+                  value={cls.classCode || cls.className}
+                >
+                  {cls.classCode || cls.className}
+                </option>
               ))}
             </select>
           </div>
@@ -396,10 +452,13 @@ const StudentManagement = () => {
               value={selectedCourse}
               onChange={(e) => setSelectedCourse(e.target.value)}
               className="input-field"
+              disabled={courseOptionsLoading}
             >
               <option value="all">Tất cả khóa</option>
-              {Array.from(new Set(students.map(s => s.courseYear).filter(Boolean))).map(course => (
-                <option key={course} value={course}>Khóa {course}</option>
+              {courseOptions.map((course) => (
+                <option key={course} value={course}>
+                  Khóa {course}
+                </option>
               ))}
             </select>
           </div>
@@ -603,19 +662,26 @@ const StudentManagement = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Lớp</label>
-                    <select className="input-field">
+                    <select className="input-field" disabled={classOptionsLoading}>
                       <option value="">Chọn lớp</option>
-                      {Array.from(new Set(students.map(s => s.className).filter(Boolean))).map(cls => (
-                        <option key={cls} value={cls}>{cls}</option>
+                      {classOptions.map((cls) => (
+                        <option
+                          key={cls.id}
+                          value={cls.classCode || cls.className}
+                        >
+                          {cls.classCode || cls.className}
+                        </option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Khóa học</label>
-                    <select className="input-field">
+                    <select className="input-field" disabled={courseOptionsLoading}>
                       <option value="">Chọn khóa</option>
-                      {Array.from(new Set(students.map(s => s.courseYear).filter(Boolean))).map(course => (
-                        <option key={course} value={course}>Khóa {course}</option>
+                      {courseOptions.map((course) => (
+                        <option key={course} value={course}>
+                          Khóa {course}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -734,10 +800,16 @@ const StudentManagement = () => {
                       className="input-field input-field-editable"
                       value={editStudentForm.className}
                       onChange={(e) => handleEditStudentInputChange('className', e.target.value)}
+                      disabled={classOptionsLoading}
                     >
                       <option value="">Chọn lớp</option>
-                      {Array.from(new Set(students.map(s => s.className).filter(Boolean))).map(cls => (
-                        <option key={cls} value={cls}>{cls}</option>
+                      {classOptions.map((cls) => (
+                        <option
+                          key={cls.id}
+                          value={cls.classCode || cls.className}
+                        >
+                          {cls.classCode || cls.className}
+                        </option>
                       ))}
                     </select>
                     {editStudentErrors.className && (
@@ -750,10 +822,13 @@ const StudentManagement = () => {
                       className="input-field input-field-editable"
                       value={editStudentForm.courseYear}
                       onChange={(e) => handleEditStudentInputChange('courseYear', e.target.value)}
+                      disabled={courseOptionsLoading}
                     >
                       <option value="">Chọn khóa</option>
-                      {Array.from(new Set(students.map(s => s.courseYear).filter(Boolean))).map(course => (
-                        <option key={course} value={course}>{`Khóa ${course}`}</option>
+                      {courseOptions.map((course) => (
+                        <option key={course} value={course}>
+                          {`Khóa ${course}`}
+                        </option>
                       ))}
                     </select>
                     {editStudentErrors.courseYear && (
