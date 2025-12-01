@@ -286,7 +286,7 @@ const StudentSubjects = () => {
                 </div>
                 <div className="flex items-center text-sm text-gray-600">
                   <ChartBarIcon className="h-4 w-4 mr-2" />
-                  <span>Tín chỉ: {subject.credits}</span>
+                  <span>Tín chỉ: {subject.credit}</span>
                 </div>
               </div>
 

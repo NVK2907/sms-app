@@ -2,11 +2,13 @@ import api from './api';
 
 export const teacherService = {
   // Lấy danh sách giáo viên với phân trang
-  getAllTeachers: async (page = 0, size = 10, sortBy = 'id', sortDir = 'asc') => {
+  getAllTeachers: async (page = 0, size = 10, sortBy = 'id', sortDir = 'asc', isActive = null) => {
     try {
-      const response = await api.get('/teachers', {
-        params: { page, size, sortBy, sortDir }
-      });
+      const params = { page, size, sortBy, sortDir };
+      if (isActive !== null) {
+        params.isActive = isActive;
+      }
+      const response = await api.get('/teachers', { params });
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
@@ -14,11 +16,13 @@ export const teacherService = {
   },
 
   // Tìm kiếm giáo viên
-  searchTeachers: async (keyword, page = 0, size = 10, sortBy = 'id', sortDir = 'asc') => {
+  searchTeachers: async (keyword, page = 0, size = 10, sortBy = 'id', sortDir = 'asc', isActive = null) => {
     try {
-      const response = await api.get('/teachers/search', {
-        params: { keyword, page, size, sortBy, sortDir }
-      });
+      const params = { keyword, page, size, sortBy, sortDir };
+      if (isActive !== null) {
+        params.isActive = isActive;
+      }
+      const response = await api.get('/teachers/search', { params });
       return response.data;
     } catch (error) {
       throw error.response?.data || error;

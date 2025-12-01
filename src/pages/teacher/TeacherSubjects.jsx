@@ -68,7 +68,7 @@ const TeacherSubjects = () => {
     const totalSubjects = filteredSubjects.length;
     const totalClasses = filteredSubjects.reduce((sum, subject) => sum + (subject.classCount || 0), 0);
     const totalStudents = filteredSubjects.reduce((sum, subject) => sum + (subject.studentCount || 0), 0);
-    const totalCredits = filteredSubjects.reduce((sum, subject) => sum + (subject.credits || 0), 0);
+    const totalCredits = filteredSubjects.reduce((sum, subject) => sum + (subject.credit || 0), 0);
     
     return { totalSubjects, totalClasses, totalStudents, totalCredits };
   };
@@ -202,7 +202,7 @@ const TeacherSubjects = () => {
                   </div>
                 </div>
                 <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                  {subject.credits} tín chỉ
+                  {subject.credit} tín chỉ
                 </span>
               </div>
               

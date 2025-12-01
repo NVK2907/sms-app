@@ -57,8 +57,6 @@ const Sidebar = () => {
           { name: 'Lớp học của tôi', path: '/teacher/classes', icon: AcademicCapIcon },
           { name: 'Môn học', path: '/teacher/subjects', icon: BookOpenIcon },
           { name: 'Lịch dạy', path: '/teacher/schedule', icon: CalendarIcon },
-          { name: 'Điểm danh', path: '/teacher/attendance', icon: UserGroupIcon },
-          { name: 'Chấm điểm', path: '/teacher/grades', icon: ChartBarIcon },
         ];
       
       case 'student':

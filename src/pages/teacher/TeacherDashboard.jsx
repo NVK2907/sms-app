@@ -261,7 +261,7 @@ const TeacherDashboard = () => {
           <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
             Thao tác nhanh
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
             <a
               href="/teacher/classes"
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
@@ -275,20 +275,6 @@ const TeacherDashboard = () => {
             >
               <CalendarIcon className="h-4 w-4 mr-2" />
               Lịch dạy
-            </a>
-            <a
-              href="/teacher/grades"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700"
-            >
-              <ChartBarIcon className="h-4 w-4 mr-2" />
-              Chấm điểm
-            </a>
-            <a
-              href="/teacher/attendance"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700"
-            >
-              <UserGroupIcon className="h-4 w-4 mr-2" />
-              Điểm danh
             </a>
           </div>
         </div>

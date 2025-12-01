@@ -340,7 +340,7 @@ const SubjectClassManagement = () => {
                           {subject.description || 'N/A'}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {subject.credits || 0} tín chỉ
+                          {subject.credit || 0} tín chỉ
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -695,7 +695,7 @@ const SubjectClassManagement = () => {
                       <input 
                         type="number" 
                         className="input-field" 
-                        defaultValue={selectedItem.credits}
+                        defaultValue={selectedItem.credit}
                         placeholder="Nhập số tín chỉ" 
                       />
                     </div>
@@ -834,7 +834,7 @@ const SubjectClassManagement = () => {
                       <>
                         <div>
                           <label className="block text-sm font-medium text-gray-500">Số tín chỉ</label>
-                          <p className="mt-1 text-sm text-gray-900">{selectedItem.credits || 0} tín chỉ</p>
+                          <p className="mt-1 text-sm text-gray-900">{selectedItem.credit || 0} tín chỉ</p>
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-500">Trạng thái</label>
@@ -922,7 +922,7 @@ const SubjectClassManagement = () => {
                       <>
                         <div className="flex justify-between">
                           <span className="text-sm text-gray-500">Số tín chỉ:</span>
-                          <span className="text-sm font-medium text-gray-900">{selectedItem.credits || 0}</span>
+                          <span className="text-sm font-medium text-gray-900">{selectedItem.credit || 0}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-sm text-gray-500">Trạng thái:</span>

@@ -33,6 +33,16 @@ export const teacherFeaturesService = {
     }
   },
 
+  // Lấy chi tiết lớp học với danh sách sinh viên
+  getClassDetails: async (classId) => {
+    try {
+      const response = await api.get(`/teacher/classes/${classId}/students`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
   // === GRADES MANAGEMENT ===
 
   // Tạo/cập nhật điểm

@@ -30,11 +30,18 @@ const TeacherManagement = () => {
     totalPages: 0
   });
 
+  // Convert selectedStatus to isActive boolean
+  const getIsActiveParam = () => {
+    if (selectedStatus === 'all') return null;
+    return selectedStatus === 'active';
+  };
+
   // Load teachers data
   const loadTeachers = async (page = 0, size = 10) => {
     setLoading(true);
     try {
-      const response = await teacherService.getAllTeachers(page, size);
+      const isActive = getIsActiveParam();
+      const response = await teacherService.getAllTeachers(page, size, 'id', 'asc', isActive);
       console.log('Teacher API Response:', response); // Debug log
       if (response.success) {
         setTeachers(response.data.teachers || []);
@@ -56,14 +63,42 @@ const TeacherManagement = () => {
   };
 
   useEffect(() => {
-    loadTeachers();
-  }, []);
+    const isActive = getIsActiveParam();
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        let response;
+        if (searchTerm.trim()) {
+          response = await teacherService.searchTeachers(searchTerm.trim(), 0, pagination.size, 'id', 'asc', isActive);
+        } else {
+          response = await teacherService.getAllTeachers(0, pagination.size, 'id', 'asc', isActive);
+        }
+        if (response.success) {
+          setTeachers(response.data.teachers || []);
+          setPagination({
+            page: response.data.currentPage || 0,
+            size: response.data.pageSize || 10,
+            totalElements: response.data.totalElements || 0,
+            totalPages: response.data.totalPages || 0
+          });
+        }
+      } catch (error) {
+        console.error('Lỗi khi tải danh sách giáo viên:', error);
+        setTeachers([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStatus]);
 
   // Search teachers
   const searchTeachers = async (keyword, page = 0, size = 10) => {
     setLoading(true);
     try {
-      const response = await teacherService.searchTeachers(keyword, page, size);
+      const isActive = getIsActiveParam();
+      const response = await teacherService.searchTeachers(keyword, page, size, 'id', 'asc', isActive);
       if (response.success) {
         setTeachers(response.data.teachers || []);
         setPagination({
@@ -83,21 +118,18 @@ const TeacherManagement = () => {
   // Handle search
   const handleSearch = () => {
     if (searchTerm.trim()) {
-      searchTeachers(searchTerm.trim(), pagination.page, pagination.size);
+      searchTeachers(searchTerm.trim(), 0, pagination.size);
     } else {
-      loadTeachers(pagination.page, pagination.size);
+      loadTeachers(0, pagination.size);
     }
   };
 
-  // Filter teachers based on subject only (search is handled by API)
+  // Filter teachers based on subject only (status is handled by API)
   const filteredTeachers = teachers.filter((teacher) => {
     const matchesSubject =
       selectedSubject === 'all' ||
       teacher.subjects?.some((subject) => subject.subjectName === selectedSubject);
-    const matchesStatus =
-      selectedStatus === 'all' ||
-      (selectedStatus === 'active' ? teacher.isActive : !teacher.isActive);
-    return matchesSubject && matchesStatus;
+    return matchesSubject;
   });
 
   const getStatusBadgeColor = (isActive) => {
