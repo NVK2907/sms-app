@@ -674,17 +674,6 @@ const StudentManagement = () => {
                       ))}
                     </select>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Khóa học</label>
-                    <select className="input-field" disabled={courseOptionsLoading}>
-                      <option value="">Chọn khóa</option>
-                      {courseOptions.map((course) => (
-                        <option key={course} value={course}>
-                          Khóa {course}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Địa chỉ</label>

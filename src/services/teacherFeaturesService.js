@@ -341,5 +341,17 @@ export const teacherFeaturesService = {
     } catch (error) {
       throw error.response?.data || error;
     }
+  },
+
+  // === SUBJECTS MANAGEMENT ===
+
+  // Lấy danh sách môn học của giáo viên
+  getTeacherSubjects: async (teacherId) => {
+    try {
+      const response = await api.get(`/teachers/${teacherId}/subjects`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
   }
 };
